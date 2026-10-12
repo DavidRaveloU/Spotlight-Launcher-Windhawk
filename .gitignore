@@ -1,0 +1,34 @@
+# Build artifacts
+*.o
+*.obj
+*.exe
+*.dll
+*.exp
+*.lib
+*.ilk
+*.pdb
+*.res
+*.wh.dll
+
+# Windhawk / mod debug output
+spotlight-launcher*.log
+*.log
+
+# Editors and IDEs
+.vs/
+.vscode/
+*.suo
+*.user
+*.swp
+*~
+
+# Windows and macOS clutter
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+.DS_Store
+
+# Local backups
+*.bak
+*.orig
+*.tmp
