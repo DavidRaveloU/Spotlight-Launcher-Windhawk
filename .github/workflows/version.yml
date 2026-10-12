@@ -1,0 +1,32 @@
+name: Sync version badge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - spotlight-launcher.wh.cpp
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync version.json from the mod's @version
+        run: |
+          version=$(grep -m1 '@version' spotlight-launcher.wh.cpp | sed -E 's/.*@version[[:space:]]+//' | tr -d '[:space:]')
+          echo "Detected version: $version"
+          printf '{\n  "version": "%s"\n}\n' "$version" > version.json
+          if git diff --quiet -- version.json; then
+            echo "version.json already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git commit -m "chore: sync version.json to $version"
+          git push
