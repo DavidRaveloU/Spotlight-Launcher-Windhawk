@@ -1,0 +1,41 @@
+name: ❓ Question / Support Request
+description: Ask a question about using, configuring, or building the Spotlight Launcher mod.
+labels: [question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Need help? 💡
+        Before asking, please make sure to check the [README](https://github.com) and the **Settings reference** section to see if your question is already answered.
+
+  - type: textarea
+    id: question-details
+    attributes:
+      label: What is your question?
+      description: Provide a clear and detailed explanation of what you are trying to do or understand.
+      placeholder: |
+        e.g., How can I compile the spotlight-launcher.wh.cpp file locally using Visual Studio? Or, is it possible to create a custom color theme?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: question-category
+    attributes:
+      label: Category
+      description: Select the area that best matches your question.
+      options:
+        - "General Usage / Configuration"
+        - "Compilation / Building from source"
+        - "Theming & Appearance"
+        - "Windhawk Environment"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: background-info
+    attributes:
+      label: Context or attempted solutions
+      description: Share any steps you have already tried or links/documentation you have reviewed.
+      placeholder: |
+        e.g., I followed the "From source" steps in the README, but I am getting a compiler error regarding C++23 features.
