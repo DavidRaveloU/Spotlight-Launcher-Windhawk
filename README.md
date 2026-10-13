@@ -112,6 +112,8 @@ Everything is reachable without touching the mouse.
 | Mouse wheel | Scroll the list without changing the selection |
 | Mouse hover | Highlight the row under the cursor |
 
+> **Note:** **Alt + Space** is also the system shortcut for a window's title-bar menu (Move, Size, Close…). While the mod is enabled with the default shortcut, that menu is not reachable by keyboard, so pick another combination in the settings if you use it. Apps like PowerToys Run make the same trade-off.
+
 ### Details panel
 Press **Ctrl + I** (or **Ctrl + K** / **Ctrl + Space** / **F4**) with an app selected to reveal a right-hand panel with actions and technical data. The actions also work with the panel closed. File actions are only offered for desktop apps; Store (MSIX) apps only expose *open* and *remove from recents*.
 
@@ -153,7 +155,7 @@ Press **Ctrl + I** (or **Ctrl + K** / **Ctrl + Space** / **F4**) with an app sel
 | --- | --- | --- |
 | Keyboard shortcut | `Alt + Space` | Combination that opens and closes the bar. |
 | Vertical position | `30%` | Where the bar sits, from the top edge (0) to the bottom edge (100). Compact mode only. |
-| Visible results | `8` | Maximum number of results. Does not change the bar height; extra rows are reached by scrolling. |
+| Maximum results | `8` | Maximum number of results. Does not change the bar height; extra rows are reached by scrolling. |
 | Panel opacity | `90%` | Opacity of the colour tint over the blurred background (70–100). Ignored by **Solid**. |
 | Background effect | `Acrylic` | Acrylic, Mica, Glass, Frosted, Aurora or Solid. |
 | Blur strength | `50` | Scales each effect's blur (40%–160%). Ignored by **Solid**. |
