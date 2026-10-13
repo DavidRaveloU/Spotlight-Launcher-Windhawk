@@ -1,0 +1,79 @@
+name: 🐛 Report a Bug
+description: Report a bug or unexpected behavior in the Spotlight Launcher mod.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Thanks for reporting the issue! 🚀
+        Please fill out this form to help us identify and fix the bug in the Windhawk mod as quickly as possible.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Preliminary review
+      description: Please make sure the bug hasn't been reported already.
+      options:
+        - label: I have searched the open/closed issues and nobody has reported this same problem.
+          required: true
+
+  - type: dropdown
+    id: windows-version
+    attributes:
+      label: Windows Version
+      description: Select your current operating system.
+      options:
+        - "Windows 11 (24H2 or newer)"
+        - "Windows 11 (23H2 / 22H2)"
+        - "Windows 10"
+        - "Other / Insider Build"
+    validations:
+      required: true
+
+  - type: input
+    id: environment-versions
+    attributes:
+      label: Windhawk and Mod Version
+      description: Which version of Windhawk do you have installed and which version of the mod are you running?
+      placeholder: "e.g., Windhawk v1.4.1 - Mod v1.0.2"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: What exactly is happening with the Spotlight Launcher? Describe the problem and what should happen instead.
+      placeholder: |
+        e.g., When pressing the keyboard shortcut to open the launcher, the search bar appears completely blank and won't let me type anything.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The exact step-by-step process to replicate the failure.
+      placeholder: |
+        1. Start Windows / Make sure Windhawk is running.
+        2. Press the keyboard shortcut (e.g., Alt + Space).
+        3. Type any word into the launcher.
+        4. See that the mod freezes or crashes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context or evidence
+      description: Anything else we should know? Links to demo repos, screenshots, or console logs are welcome.
+      placeholder: You can drag and drop your images directly here.
+
+  - type: checkboxes
+    id: submit-pr
+    attributes:
+      label: Are you willing to submit a PR?
+      description: >
+        (Optional) We encourage you to open a [Pull Request](https://github.com/DavidRaveloU/Spotlight-Launcher-Windhawk/pulls) if you have a fix or improvement in mind.
+      options:
+        - label: Yes, I'd like to help by submitting a PR!
