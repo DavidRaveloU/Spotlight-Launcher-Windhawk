@@ -23,7 +23,7 @@ Press **Alt + Space**, type a few letters, press **Enter**. That is the whole id
 
 </div>
 
-Spotlight Launcher indexes the same applications you see in the Start menu (classic programs and Microsoft Store / MSIX apps) and filters them as you type. It runs in its own `windhawk.exe` process, so it never gets injected into Explorer and cannot affect the shell.
+Spotlight Launcher indexes the same applications you see in the Start menu (both classic programs and Microsoft Store apps) and filters them as you type. It runs on its own, as a Windhawk mod, so it never runs inside File Explorer and cannot affect the way Windows works.
 
 ---
 
@@ -89,9 +89,9 @@ The rest (the **Acrylic**, **Mica** and **Solid** effects, and the remaining col
 ### Instant, forgiving search
 * Filters classic programs and Microsoft Store apps as you type.
 * Case- and accent-insensitive.
-* Multi-word queries (`visual code`) and acronyms (`vsc` finds *Visual Studio Code*).
+* Multi-word queries (`visual code`) and acronyms (typing the initials of each word, like `vsc`).
 * Matching letters are highlighted in the result.
-* Results show a friendly name plus the real target (exe, `.lnk`, MSIX package).
+* Results show a friendly name plus the file or package they open.
 
 ### Keyboard-first
 Everything is reachable without touching the mouse.
@@ -112,16 +112,23 @@ Everything is reachable without touching the mouse.
 | Mouse wheel | Scroll the list without changing the selection |
 | Mouse hover | Highlight the row under the cursor |
 
-> **Note:** **Alt + Space** is also the system shortcut for a window's title-bar menu (Move, Size, Close…). While the mod is enabled with the default shortcut, that menu is not reachable by keyboard, so pick another combination in the settings if you use it. Apps like PowerToys Run make the same trade-off.
+> **Note:** **Alt + Space** is also the system shortcut for a window's title-bar menu (Move, Size, Close…). While the mod is enabled with the default shortcut, that menu is not reachable by keyboard, so pick another combination in the settings if you use it.
 
 ### Details panel
-Press **Ctrl + I** (or **Ctrl + K** / **Ctrl + Space** / **F4**) with an app selected to reveal a right-hand panel with actions and technical data. The actions also work with the panel closed. File actions are only offered for desktop apps; Store (MSIX) apps only expose *open* and *remove from recents*.
+Press **Ctrl + I** (or **Ctrl + K** / **Ctrl + Space** / **F4**) with an app selected to reveal a right-hand panel with actions and extra details. The actions also work with the panel closed. File actions are only offered for classic programs; Microsoft Store apps only offer *open* and *remove from recents*.
+
+### Built-in calculator
+Type a calculation and the result appears as you go: a highlighted card at the top of the list shows it, and it is also shown faintly next to what you typed. Press **Enter** to copy the result; recent results are kept so you can reuse them. It only reacts when the whole text looks like a calculation, so ordinary searches are left alone.
+
+### Soft interface sounds
+Gentle sounds play as you use the launcher: one when the bar opens, a soft rise and fall when the details panel opens and closes, and a soft, deep key sound as you type. Everything is generated inside the mod, so it needs no extra files and no internet connection. You can turn the sounds off or change their volume in the settings.
 
 ### Appearance
 * Six background effects (**Acrylic**, **Mica**, **Glass**, **Frosted**, **Aurora**, **Solid**) and 12 colours.
-* Effects capture what is behind the bar on open, blur it and composite it inside the rounded card (tint, grain, highlights, gradients) — so they look the same on Windows 10 and 11 without undocumented DWM APIs.
+* Each effect is built from a blurred view of whatever is behind the bar, finished with a colour tint, subtle grain and light highlights, so the bar looks the same on Windows 10 and 11.
+* **Live acrylic**: Acrylic, Frosted and Aurora follow what is behind the bar in real time, and Glass keeps refreshing its blur as the background changes. Turning it off uses a single snapshot taken when the bar opens, which helps performance and saves battery.
 * Adjustable panel opacity, blur strength and layout.
-* Adapts to the DPI of each monitor.
+* Looks sharp on every monitor, even high-resolution ones or a mix of several.
 * The bar can sit anywhere from against the top edge to against the bottom edge of the screen.
 
 ### Fresh without fuss
@@ -130,7 +137,7 @@ Press **Ctrl + I** (or **Ctrl + K** / **Ctrl + Space** / **F4**) with an app sel
 * Installers write an "Uninstall …" shortcut for everything they install; the mod inspects what each shortcut actually runs and hides the uninstallers and documentation, while keeping real tools whose names merely contain "uninstall".
 
 ### Safe by design
-* Runs as a Windhawk **tool** mod in its own process, not inside Explorer.
+* Runs as a Windhawk **tool** mod on its own, separate from File Explorer, so it cannot affect Windows itself.
 * **Disable in fullscreen**: the hotkey stays quiet while a fullscreen window (a game, a video player, a fullscreen browser) is focused.
 * If another app already owns the shortcut, the mod warns you instead of fighting over it.
 
@@ -153,18 +160,23 @@ Press **Ctrl + I** (or **Ctrl + K** / **Ctrl + Space** / **F4**) with an app sel
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| Keyboard shortcut | `Alt + Space` | Combination that opens and closes the bar. |
-| Vertical position | `30%` | Where the bar sits, from the top edge (0) to the bottom edge (100). Compact mode only. |
-| Maximum results | `8` | Maximum number of results. Does not change the bar height; extra rows are reached by scrolling. |
-| Panel opacity | `90%` | Opacity of the colour tint over the blurred background (70–100). Ignored by **Solid**. |
+| Keyboard shortcut | `Alt + Space` | Key combination that opens and closes the bar. |
+| Vertical position | `30%` | Where the bar sits, from the top edge (0) to the bottom edge (100). |
+| Maximum results | `8` | How many apps are shown at once. Extra rows are reached by scrolling. |
+| Panel opacity | `90%` | How solid the colour is (70–100). Ignored by **Solid**. |
 | Background effect | `Acrylic` | Acrylic, Mica, Glass, Frosted, Aurora or Solid. |
-| Blur strength | `50` | Scales each effect's blur (40%–160%). Ignored by **Solid**. |
-| Colour | `Midnight blue` | Background, selection accent and highlighted letters. 12 options. |
-| Hide uninstallers and documentation | `On` | Hides "Uninstall …" and readme/help shortcuts by inspecting their targets. |
+| Live acrylic (real time) | `On` | Keeps Acrylic, Frosted and Aurora updating live and Glass refreshing. Turn it off to save power. |
+| Blur strength | `50` | How strong the blur is. Ignored by **Solid**. |
+| Colour | `Midnight blue` | Background, selection highlight and matching letters. 12 options. |
+| Hide uninstallers and documentation | `On` | Hides "Uninstall …" and readme/help shortcuts by checking what they open. |
 | App index updates | `Automatic` | Automatic, every time it opens, or a fixed 1/3/5/10-minute interval. |
 | List mode | `Expanded` | Compact = bar only; Expanded = recents and suggestions when empty. |
 | Details panel shortcut | `Ctrl + I` | Ctrl + I, Ctrl + K, Ctrl + Space or F4. |
-| Disable in fullscreen | `On` | Ignores the hotkey (and closes the bar) while a fullscreen window is focused. |
+| Disable in fullscreen | `On` | Ignores the shortcut (and closes the bar) while a fullscreen window is focused. |
+| Calculator | `On` | Shows the result as you type a calculation; Enter copies it. |
+| Calculator display | `Card and inline text` | Card, inline text, or both. |
+| Interface sounds | `On` | Soft sounds for opening, the details panel and typing. Works offline. |
+| Sound volume | `20%` | How loud the interface sounds are. |
 
 ---
 
