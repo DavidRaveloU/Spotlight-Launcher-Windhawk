@@ -101,8 +101,8 @@ Gentle sounds play as you use the launcher: a soft switch-like click when the ba
 
 * Six background effects (**Acrylic**, **Mica**, **Glass**, **Frosted**, **Aurora**, **Solid**) and 12 colours.
 * Each effect is built from a blurred view of whatever is behind the bar, finished with a colour tint, subtle grain and light highlights, so the bar looks the same on Windows 10 and 11.
-* **Live acrylic**: Acrylic, Frosted and Aurora follow what is behind the bar in real time, and Glass keeps refreshing its blur as the background changes. Turning it off uses a single snapshot taken when the bar opens, which helps performance and saves battery. It is on by default and can be changed in the settings.
-* Adjustable panel opacity, blur strength and layout.
+* **Live acrylic**: Acrylic, Glass, Frosted and Aurora follow what is behind the bar in real time. Turning it off uses a single snapshot taken when the bar opens, which helps performance and saves battery. It is on by default and can be changed in the settings.
+* Adjustable panel opacity, blur strength and layout. Blur strength applies to Mica, and to the other effects while Live acrylic is off; with it on, Windows sets their blur strength.
 * Looks sharp on every monitor, even high-resolution ones or a mix of several.
 * The bar can sit anywhere from against the top edge to against the bottom edge of the screen.
 
@@ -201,10 +201,10 @@ Copyright (c) 2026-present David Ravelo.
     - solid: Solid (no effect)
 - LiveAcrylic: true
   $name: Live acrylic (real time)
-  $description: Keeps the background blur live. Acrylic, Frosted and Aurora follow whatever is behind the bar in real time, and Glass keeps refreshing its blur as the background changes. Turn it off to use a single snapshot taken when the bar opens, which helps performance and saves battery on laptops and low-end machines. Needs Windows 10 1803 or newer.
+  $description: Keeps the background blur live. Acrylic, Glass, Frosted and Aurora follow whatever is behind the bar in real time. Turn it off to use a single snapshot taken when the bar opens, which helps performance and saves battery on laptops and low-end machines. With it on, the blur strength of those effects is fixed by Windows and the Blur strength setting has no effect on them (Mica always follows it). Needs Windows 10 1803 or newer.
 - BlurAmount: 50
   $name: Blur strength (0 to 100)
-  $description: How strong the blur is. 50 is the normal amount, lower values give a subtler blur and higher values a heavier one. The blur is seen through the colour, so it shows best with a Panel opacity below 100. Ignored with "Solid".
+  $description: How strong the blur is. 50 is the normal amount, lower values give a subtler blur and higher values a heavier one. The blur is seen through the colour, so it shows best with a Panel opacity below 100. Applies to Mica, and to the other effects only while Live acrylic is off (with it on, Windows sets their blur strength). Ignored with "Solid".
 - Color: midnight
   $name: Color
   $description: Colour scheme of the bar. Each colour sets the background colour, the selection highlight and the colour of the matching letters.
@@ -293,6 +293,7 @@ Copyright (c) 2026-present David Ravelo.
 #include <xaudio2.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <cwctype>
@@ -304,6 +305,10 @@ Copyright (c) 2026-present David Ravelo.
 #include <cstdio>
 #include <cwchar>
 #include <cstring>
+
+#ifndef LOAD_LIBRARY_SEARCH_SYSTEM32
+#define LOAD_LIBRARY_SEARCH_SYSTEM32 0x00000800
+#endif
 
 // ===== Inline calculator engine =====
 // A small self-contained arithmetic evaluator (tokenizer + recursive-descent parser). It is
@@ -347,6 +352,8 @@ struct Result {
     // conversions). It is not parseable by the evaluator, so `insertable` holds the plain form.
     std::wstring display;
     std::wstring insertable;
+    // The input was just a constant such as "pi" or "ans". App matches take priority over it.
+    bool loneConstant = false;
 };
 
 // Values supplied by the host: the previous result, so "ans" can be reused.
@@ -653,6 +660,7 @@ struct Lexed {
 
 inline Lexed Lex(const std::wstring& in, const Locale& loc, bool hasAns = false) {
     Lexed out;
+    bool sawKeyword = false;
     size_t i = 0;
     const size_t n = in.size();
     while (i < n) {
@@ -735,7 +743,7 @@ inline Lexed Lex(const std::wstring& in, const Locale& loc, bool hasAns = false)
             if (!IsFunction(id) && !isKw && !IsConstant(id, cval) && !(hasAns && id == L"ans")) {
                 out.knownIdents = false;
             }
-            if (isKw) out.mathy = true;
+            if (isKw) sawKeyword = true;
             Token t;
             t.kind = Tk::Ident;
             t.id = id;
@@ -770,6 +778,13 @@ inline Lexed Lex(const std::wstring& in, const Locale& loc, bool hasAns = false)
         }
         out.ok = false;
         return out;
+    }
+    // "mod" / "of" only count as maths next to a number ("10 mod 3", "20 of 150"). Alone they are
+    // just the start of a name ("Office", "Mod Organizer") and must not show an error card.
+    if (sawKeyword) {
+        for (const Token& tk : out.toks) {
+            if (tk.kind == Tk::Num) { out.mathy = true; break; }
+        }
     }
     Token end;
     end.kind = Tk::End;
@@ -1016,6 +1031,7 @@ inline Result EvalCore(const std::wstring& input, const Locale& loc, const Conte
     }
     res.status = Status::Ok;
     res.value = v.v;
+    res.loneConstant = loneConstant;
     return res;
 }
 
@@ -1088,7 +1104,11 @@ inline bool DataRank(const std::wstring& name, int& rank, bool& isBinNamed) {
     return false;
 }
 
+// Values at or beyond 2^64 do not fit the unsigned conversion below (undefined behaviour).
+inline bool FitsInBase(double v) { return std::isfinite(v) && std::fabs(v) < 18446744073709551616.0; }
+
 inline std::wstring FormatInBase(double v, int base) {
+    if (!FitsInBase(v)) return L"";
     const bool neg = v < 0;
     unsigned long long u = (unsigned long long)(neg ? -v : v);
     static const wchar_t* const kDigits = L"0123456789ABCDEF";
@@ -1122,6 +1142,11 @@ inline bool TryConversion(const std::wstring& input, const Locale& loc, const Co
         if (l.value != std::floor(l.value) || !std::isfinite(l.value)) {
             out.status = Status::Error;
             out.error = L"a base conversion needs a whole number";
+            return true;
+        }
+        if (!FitsInBase(l.value)) {
+            out.status = Status::Error;
+            out.error = L"the number is too large for a base conversion";
             return true;
         }
         out.status = Status::Ok;
@@ -1182,7 +1207,7 @@ inline bool TryConversion(const std::wstring& input, const Locale& loc, const Co
             out.insertable = ps;
             out.display = ps + L" " + dst->sym;
             if (other != prim) {
-                out.display += (primaryBin ? L"  (decimal " : L"  (binario ") + Format(other, loc) +
+                out.display += (primaryBin ? L"  (decimal " : L"  (binary ") + Format(other, loc) +
                                 L" " + dst->sym + L")";
             }
             return true;
@@ -1265,42 +1290,6 @@ inline std::wstring Format(double v, const Locale& loc) {
     return out;
 }
 
-inline std::wstring FormatScientific(double v, const Locale& loc, int digits = 6) {
-    if (!std::isfinite(v)) return L"—";
-    wchar_t buf[64] = {};
-    swprintf(buf, ARRAYSIZE(buf), L"%.*e", digits, v);
-    std::wstring s = buf;
-    for (wchar_t& ch : s) {
-        if (ch == L'.') ch = loc.decimal;
-    }
-    return s;
-}
-
-inline std::wstring FormatHex(double v) {
-    if (!std::isfinite(v) || v != std::floor(v)) return L"";
-    long long iv = (long long)v;
-    wchar_t buf[32] = {};
-    if (iv < 0) {
-        swprintf(buf, ARRAYSIZE(buf), L"-0x%llx", (unsigned long long)(-iv));
-    } else {
-        swprintf(buf, ARRAYSIZE(buf), L"0x%llx", (unsigned long long)iv);
-    }
-    return buf;
-}
-
-inline std::wstring FormatBinary(double v) {
-    if (!std::isfinite(v) || v != std::floor(v) || v < 0) return L"";
-    unsigned long long u = (unsigned long long)v;
-    if (u == 0) return L"0b0";
-    std::wstring bits;
-    while (u) {
-        bits.push_back((u & 1) ? L'1' : L'0');
-        u >>= 1;
-    }
-    std::reverse(bits.begin(), bits.end());
-    return L"0b" + bits;
-}
-
 }  // namespace Calc
 
 // ===== Design constants (in DIP; they are multiplied by the monitor scale) =====
@@ -1371,7 +1360,6 @@ static const UINT_PTR TIMER_FRAME = 1;
 static const UINT_PTR TIMER_BLINK = 2;
 static const UINT_PTR TIMER_COPY = 3;  // clears the calculator "Copied" flash
 static const UINT_PTR TIMER_CALC = 4;  // debounce for calculator evaluation
-static const UINT_PTR TIMER_GLASS = 5; // refreshes the Glass backdrop while the bar is open
 static const int HOTKEY_ID = 1;
 
 // ===== Types =====
@@ -1746,11 +1734,9 @@ static std::wstring FoldString(const std::wstring& s) {
 }
 
 static std::wstring GetStringSetting(const wchar_t* name) {
-    PCWSTR s = Wh_GetStringSetting(name);
-    std::wstring r = s ? s : L"";
-    if (s) {
-        Wh_FreeStringSetting(s);
-    }
+    PCWSTR s = Wh_GetStringSetting(name);  // never returns NULL
+    std::wstring r = s;
+    Wh_FreeStringSetting(s);
     return r;
 }
 
@@ -1867,6 +1853,17 @@ struct Engine {
 
 static Engine g_eng;
 static unsigned g_rng = 0x9E3779B9u;
+
+// XAudio2 reports a lost output device (unplugged headset, disabled device...) through
+// OnCriticalError, on its own audio thread. StartEngine can still succeed afterwards with no
+// audible output, so the flag is what tells Resume() to rebuild the engine.
+struct EngineCallback : IXAudio2EngineCallback {
+    std::atomic<bool> lost{false};
+    void STDMETHODCALLTYPE OnProcessingPassStart() override {}
+    void STDMETHODCALLTYPE OnProcessingPassEnd() override {}
+    void STDMETHODCALLTYPE OnCriticalError(HRESULT) override { lost = true; }
+};
+static EngineCallback g_engineCallback;
 
 static double Rand01() {
     g_rng = g_rng * 1664525u + 1013904223u;
@@ -2063,14 +2060,16 @@ static void RenderAll() {
 }
 
 static bool Init() {
-    RenderAll();
+    if (g_eng.samples.empty()) RenderAll();
     Engine& e = g_eng;
-    e.dll = LoadLibraryW(L"xaudio2_9.dll");
-    if (!e.dll) e.dll = LoadLibraryW(L"xaudio2_8.dll");
+    e.dll = LoadLibraryExW(L"xaudio2_9.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (!e.dll) e.dll = LoadLibraryExW(L"xaudio2_8.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (!e.dll) return false;
     XAudio2Create_t create = (XAudio2Create_t)GetProcAddress(e.dll, "XAudio2Create");
     if (!create) return false;
     if (FAILED(create(&e.engine, 0, XAUDIO2_DEFAULT_PROCESSOR)) || !e.engine) return false;
+    g_engineCallback.lost = false;
+    e.engine->RegisterForCallbacks(&g_engineCallback);
     if (FAILED(e.engine->CreateMasteringVoice(&e.master)) || !e.master) return false;
     e.fmt.wFormatTag = WAVE_FORMAT_PCM;
     e.fmt.nChannels = 1;
@@ -2082,6 +2081,9 @@ static bool Init() {
     for (int i = 0; i < kVoices; ++i) {
         if (FAILED(e.engine->CreateSourceVoice(&e.voices[i], &e.fmt))) e.voices[i] = nullptr;
     }
+    // XAudio2 starts its engine on creation: keep it stopped (no audio thread / render stream)
+    // until the bar opens with sounds enabled.
+    e.engine->StopEngine();
     e.ready = true;
     return true;
 }
@@ -2093,11 +2095,36 @@ static void Shutdown() {
             if (e.voices[i]) { e.voices[i]->DestroyVoice(); e.voices[i] = nullptr; }
         }
         if (e.master) { e.master->DestroyVoice(); e.master = nullptr; }
+        e.engine->UnregisterForCallbacks(&g_engineCallback);
         e.engine->Release();
         e.engine = nullptr;
     }
     if (e.dll) { FreeLibrary(e.dll); e.dll = nullptr; }
     e.ready = false;
+}
+
+// The engine only runs while the bar is open and sounds are enabled.
+// If there was no output device at startup, or the device was removed (the engine then reports
+// a critical error, see EngineCallback), rebuild the engine here before starting it.
+static void Resume() {
+    if (!g_cfg.sounds) return;
+    Engine& e = g_eng;
+    if (e.ready && e.engine && !g_engineCallback.lost && SUCCEEDED(e.engine->StartEngine())) return;
+    Shutdown();
+    if (Init() && e.engine) e.engine->StartEngine();
+}
+static void Suspend() { if (g_eng.engine) g_eng.engine->StopEngine(); }
+
+// Creates the engine only when sounds are on; releases it completely when they are off.
+static void Configure() {
+    if (g_cfg.sounds) {
+        if (!g_eng.ready) {
+            Shutdown();  // clean up any partial init before retrying
+            Init();
+        }
+    } else {
+        Shutdown();
+    }
 }
 
 static void ApplyVolume() {
@@ -2522,9 +2549,49 @@ static void UpdateCalc() {
     }
 }
 
+// What Enter copies: the bare number, so it pastes cleanly into other apps. The display text
+// adds thousands separators, the unit and (for data sizes) the other reading in brackets. Base
+// conversions are the exception: their digits only make sense as shown (e.g. "0xFF").
+static std::wstring CalcClipboardText() {
+    if (!g_calc.display.empty() && g_calc.insertable == g_calc.display) {
+        return g_calc.display;
+    }
+    Calc::Locale plain = Calc::SystemLocale();
+    plain.grouping = false;
+    return Calc::Format(g_calc.value, plain);
+}
+
+// SID of the current user. Windhawk's Wh_Get/SetIntValue storage is machine-wide in a regular
+// install, and each signed-in user runs their own tool process, so put the SID in the value
+// names; otherwise "Recent" and "Suggestions" would be shared by every account on the PC.
+static std::wstring CurrentUserSid() {
+    static std::wstring sid;
+    if (!sid.empty()) return sid;
+    HANDLE token = nullptr;
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token) && token) {
+        DWORD size = 0;
+        GetTokenInformation(token, TokenUser, nullptr, 0, &size);
+        if (size > 0) {
+            std::vector<BYTE> buf(size);
+            TOKEN_USER* user = reinterpret_cast<TOKEN_USER*>(buf.data());
+            if (GetTokenInformation(token, TokenUser, user, size, &size) && user->User.Sid) {
+                LPWSTR str = nullptr;
+                if (ConvertSidToStringSidW(user->User.Sid, &str) && str) {
+                    sid = str;
+                    LocalFree(str);
+                }
+            }
+        }
+        CloseHandle(token);
+    }
+    if (sid.empty()) sid = L"shared";  // fallback: degrade to machine-wide if the SID fails
+    return sid;
+}
+
 // ===== Calculator history (persisted in the mod's local storage) =====
 
-static const wchar_t* const kCalcHistKey = L"calc.history";
+// Per-user names: Windhawk storage is machine-wide, so the SID keeps accounts separate.
+static std::wstring CalcHistKey() { return L"calc.history_" + CurrentUserSid(); }
 static const size_t kCalcHistMax = 10;
 
 static void TrimHistField(std::wstring& s) {
@@ -2536,7 +2603,7 @@ static void TrimHistField(std::wstring& s) {
 static void LoadCalcHistory() {
     g_calcHist.clear();
     wchar_t buf[8192] = {};
-    size_t n = Wh_GetStringValue(kCalcHistKey, buf, ARRAYSIZE(buf));
+    size_t n = Wh_GetStringValue(CalcHistKey().c_str(), buf, ARRAYSIZE(buf));
     if (n == 0) return;
     std::wstring all(buf, n);
     size_t start = 0;
@@ -2575,16 +2642,16 @@ static void SaveCalcHistory() {
         all += L'\t';
         all += g_calcHist[i].insVal.empty() ? g_calcHist[i].resFmt : g_calcHist[i].insVal;
     }
-    Wh_SetStringValue(kCalcHistKey, all.c_str());
+    Wh_SetStringValue(CalcHistKey().c_str(), all.c_str());
 }
 
 // "ans": the last committed result, persisted so it survives a restart.
-static const wchar_t* const kCalcAnsKey = L"calc.ans";
+static std::wstring CalcAnsKey() { return L"calc.ans_" + CurrentUserSid(); }
 
 static void LoadCalcAns() {
     g_calcHasAns = false;
     wchar_t buf[64] = {};
-    size_t n = Wh_GetStringValue(kCalcAnsKey, buf, ARRAYSIZE(buf));
+    size_t n = Wh_GetStringValue(CalcAnsKey().c_str(), buf, ARRAYSIZE(buf));
     if (n == 0) return;
     double v = 0.0;
     if (Calc::detail::ParseCleanDecimal(buf, v)) {
@@ -2598,7 +2665,7 @@ static void SetCalcAns(double v) {
     g_calcHasAns = true;
     wchar_t buf[64] = {};
     swprintf(buf, ARRAYSIZE(buf), L"%.17g", v);
-    Wh_SetStringValue(kCalcAnsKey, buf);
+    Wh_SetStringValue(CalcAnsKey().c_str(), buf);
 }
 
 // Records a calculation the user committed (pressed Enter on). Repeating an expression moves it
@@ -2643,7 +2710,10 @@ static void RunSearch() {
 
     // A valid calculation is the only result: it is what Enter copies, so we do not mix it with
     // app matches (a query like "2+2" should never launch an app that happened to match).
-    if (CalcOk()) {
+    // Exception: a lone constant ("pi", "tau", "phi", "ans") only wins when no app matches,
+    // so typing the start of "Pinta" or "PicPick" keeps showing the apps.
+    const bool loneConst = CalcOk() && g_calc.loneConstant;
+    if (CalcOk() && !loneConst) {
         BuildRowOffsets();
         return;
     }
@@ -2680,6 +2750,11 @@ static void RunSearch() {
     // bar is fixed and rows that do not fit are reached by scrolling.
     if ((int)g_results.size() > g_cfg.maxRows) {
         g_results.resize((size_t)g_cfg.maxRows);
+    }
+    if (loneConst && !g_results.empty()) {
+        g_calc = Calc::Result();  // apps matched: drop the constant's result card
+        g_calcDisplay.clear();
+        g_calcActive = false;
     }
     BuildRowOffsets();
 }
@@ -3564,33 +3639,6 @@ static void MaybeReindexInBackground() {
     }
 }
 
-// SID of the current user. Windhawk's Wh_Get/SetIntValue storage is machine-wide in a regular
-// install, and each signed-in user runs their own tool process, so put the SID in the value
-// names; otherwise "Recent" and "Suggestions" would be shared by every account on the PC.
-static std::wstring CurrentUserSid() {
-    static std::wstring sid;
-    if (!sid.empty()) return sid;
-    HANDLE token = nullptr;
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token) && token) {
-        DWORD size = 0;
-        GetTokenInformation(token, TokenUser, nullptr, 0, &size);
-        if (size > 0) {
-            std::vector<BYTE> buf(size);
-            TOKEN_USER* user = reinterpret_cast<TOKEN_USER*>(buf.data());
-            if (GetTokenInformation(token, TokenUser, user, size, &size) && user->User.Sid) {
-                LPWSTR str = nullptr;
-                if (ConvertSidToStringSidW(user->User.Sid, &str) && str) {
-                    sid = str;
-                    LocalFree(str);
-                }
-            }
-        }
-        CloseHandle(token);
-    }
-    if (sid.empty()) sid = L"shared";  // fallback: degrade to machine-wide if the SID fails
-    return sid;
-}
-
 static std::wstring UsageKey(const std::wstring& id) {
     uint64_t h = 1469598103934665603ULL;
     for (wchar_t c : id) {
@@ -3673,7 +3721,7 @@ typedef HRESULT(WINAPI* GetDpiForMonitor_t)(HMONITOR, int, UINT*, UINT*);
 
 static double MonitorScale(HMONITOR mon) {
     static GetDpiForMonitor_t fn = [] {
-        HMODULE m = LoadLibraryW(L"shcore.dll");
+        HMODULE m = LoadLibraryExW(L"shcore.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
         return m ? (GetDpiForMonitor_t)GetProcAddress(m, "GetDpiForMonitor") : nullptr;
     }();
     UINT dx = 96, dy = 96;
@@ -3866,7 +3914,7 @@ static void BuildBackdrop(const uint32_t* src, int w, int h, int factor, double 
 
 static void WaitForCompositor() {
     typedef HRESULT(WINAPI * DwmFlush_t)();
-    HMODULE m = LoadLibraryW(L"dwmapi.dll");
+    HMODULE m = LoadLibraryExW(L"dwmapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (m) {
         auto fn = (DwmFlush_t)GetProcAddress(m, "DwmFlush");
         if (fn) fn();
@@ -3921,16 +3969,15 @@ static float EffectTintAlpha() {
     return std::clamp(AcrylicTintAlpha() * GetEffectParams().tintMul, 0.f, 1.f);
 }
 
-// ---- API no documentada (SetWindowCompositionAttribute + WCA_ACCENT_POLICY) ----
+// ---- Undocumented API (SetWindowCompositionAttribute + WCA_ACCENT_POLICY) ----
 enum LvAccentState {
-    LV_ACCENT_DISABLED = 0,
     LV_ACCENT_ACRYLICBLURBEHIND = 4,
 };
 
 struct LvAccentPolicy {
     int AccentState;
     int AccentFlags;
-    DWORD GradientColor;  // ABGR: alpha = opacidad del tinte
+    DWORD GradientColor;  // ABGR: alpha = tint opacity
     DWORD AnimationId;
 };
 
@@ -3942,21 +3989,20 @@ struct LvWinCompAttrData {
 
 typedef BOOL(WINAPI* LvSetWindowCompositionAttribute_t)(HWND, LvWinCompAttrData*);
 
-static HWND g_liveWnd = nullptr;                    // ventana del acrylic (debajo de g_hwnd)
-static bool g_liveSupported = false;                // API presente y Windows >= 1803
+static HWND g_liveWnd = nullptr;                    // acrylic window (below g_hwnd)
+static bool g_liveSupported = false;                // API present and Windows >= 1803
 static LvSetWindowCompositionAttribute_t g_pSetWCA = nullptr;
-static int g_liveAlpha = -1;                        // cache del alpha aplicado
-static bool g_liveRgnValid = false;
-static HWND g_livePanel = nullptr;                  // acrylic del panel de detalles
-static bool g_liveWin11 = false;                    // Windows 11: esquinas redondeadas por DWM
+static HWND g_livePanel = nullptr;                  // acrylic of the details panel
+static bool g_liveWin11 = false;                    // Windows 11: corners rounded by DWM
 typedef HRESULT(WINAPI* LvDwmSetWindowAttribute_t)(HWND, DWORD, LPCVOID, DWORD);
 static LvDwmSetWindowAttribute_t g_pDwmSetAttr = nullptr;
-static int g_liveRgnSize[2][2] = {};                // Windows 10: tamaño de la última región
+static int g_liveRgnSize[2][2] = {};                // Windows 10: size of the last region
+static int g_livePos[2][4] = {};                    // last x, y, w, h given to each window
 
 static bool UseLive() {
     if (!g_liveSupported || !g_cfg.liveAcrylic) return false;
-    return g_cfg.effect == BgEffect::Acrylic || g_cfg.effect == BgEffect::Frosted ||
-           g_cfg.effect == BgEffect::Aurora;
+    return g_cfg.effect == BgEffect::Acrylic || g_cfg.effect == BgEffect::Glass ||
+           g_cfg.effect == BgEffect::Frosted || g_cfg.effect == BgEffect::Aurora;
 }
 
 static bool WindowsBuildAtLeast(DWORD build) {
@@ -3974,20 +4020,20 @@ static LRESULT CALLBACK LiveWndProc(HWND h, UINT m, WPARAM w, LPARAM l) {
         case WM_MOUSEACTIVATE:
             return MA_NOACTIVATE;
         case WM_NCHITTEST:
-            return HTTRANSPARENT;  // la ventana de arriba (g_hwnd) recibe el input
+            return HTTRANSPARENT;  // the top window (g_hwnd) receives the input
     }
     return DefWindowProcW(h, m, w, l);
 }
 
 static HWND LiveCreateOne(HINSTANCE hInst) {
-    // Sin WS_EX_LAYERED: DWM ignora regiones y el acrylic en ventanas layered.
+    // No WS_EX_LAYERED: DWM ignores regions and acrylic on layered windows.
     HWND h = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
                              L"SpotlightLauncherBackdrop", L"", WS_POPUP, 0, 0, 100, 100, nullptr,
                              nullptr, hInst, nullptr);
     if (h && g_pDwmSetAttr && g_liveWin11) {
         const DWORD pref = 2;  // DWMWCP_ROUND
         g_pDwmSetAttr(h, 33 /*DWMWA_WINDOW_CORNER_PREFERENCE*/, &pref, sizeof(pref));
-        const DWORD none = 0xFFFFFFFE;  // DWMWA_COLOR_NONE: sin borde del sistema
+        const DWORD none = 0xFFFFFFFE;  // DWMWA_COLOR_NONE: no system border
         g_pDwmSetAttr(h, 34 /*DWMWA_BORDER_COLOR*/, &none, sizeof(none));
     }
     return h;
@@ -4001,14 +4047,14 @@ static bool LiveCreate(HINSTANCE hInst) {
     if (!g_liveSupported) return false;
 
     g_liveWin11 = WindowsBuildAtLeast(22000);
-    HMODULE dm = LoadLibraryW(L"dwmapi.dll");
+    HMODULE dm = LoadLibraryExW(L"dwmapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     g_pDwmSetAttr = dm ? (LvDwmSetWindowAttribute_t)GetProcAddress(dm, "DwmSetWindowAttribute") : nullptr;
 
     WNDCLASSEXW wc = {};
     wc.cbSize = sizeof(wc);
     wc.lpfnWndProc = LiveWndProc;
     wc.hInstance = hInst;
-    wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);  // negro = transparente para DWM
+    wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);  // black = transparent for DWM
     wc.lpszClassName = L"SpotlightLauncherBackdrop";
     RegisterClassExW(&wc);
 
@@ -4032,12 +4078,12 @@ static void LiveDestroy() {
     }
 }
 
-// Tinte + acrylic en tiempo real.
+// Tint + real-time acrylic.
 static void LiveApplyAccent() {
     if (!g_pSetWCA) return;
     auto to8 = [](float v) { return (DWORD)std::clamp((int)std::lround(v * 255.f), 0, 255); };
     DWORD a = to8(EffectTintAlpha());
-    if (a == 0) a = 1;  // el acrylic no soporta opacidad 0
+    if (a == 0) a = 1;  // acrylic does not support zero opacity
     LvAccentPolicy p = {};
     p.AccentState = LV_ACCENT_ACRYLICBLURBEHIND;
     p.AccentFlags = 0;
@@ -4050,12 +4096,11 @@ static void LiveApplyAccent() {
 static void LiveHide() {
     if (g_liveWnd && IsWindowVisible(g_liveWnd)) ShowWindow(g_liveWnd, SW_HIDE);
     if (g_livePanel && IsWindowVisible(g_livePanel)) ShowWindow(g_livePanel, SW_HIDE);
-    g_liveRgnValid = false;
-    g_liveAlpha = -1;
     memset(g_liveRgnSize, 0, sizeof(g_liveRgnSize));
+    memset(g_livePos, 0, sizeof(g_livePos));
 }
 
-// Grano: se separa de EnsureBackdropBrushes (ver paso 4).
+// Grain: kept separate from EnsureBackdropBrushes.
 static void EnsureNoiseBrush() {
     if (g_noiseBrush || !g_rt) return;
     const int N = 128;
@@ -4065,7 +4110,7 @@ static void EnsureNoiseBrush() {
         s ^= s << 13;
         s ^= s >> 17;
         s ^= s << 5;
-        const uint32_t a = 22;  // grano base ~8.6%; cada efecto lo escala con noiseMul
+        const uint32_t a = 22;  // base grain ~8.6%; each effect scales it with noiseMul
         const uint32_t c = (s & 0xFF) * a / 255;
         p = (a << 24) | (c << 16) | (c << 8) | c;
     }
@@ -4122,45 +4167,6 @@ static bool CaptureBackdrop(int x, int y, int w, int h) {
         return false;
     }
     return true;
-}
-
-// ---- Glass en tiempo real ----
-// Glass usa poco blur, así que el acrylic de DWM (blur fijo y alto) no sirve. En su lugar se
-// vuelve a capturar el escritorio varias veces por segundo mientras la barra está abierta. Para
-// que la captura no incluya la propia barra, la ventana se excluye de la captura de pantalla
-// (WDA_EXCLUDEFROMCAPTURE, Windows 10 2004+). Si Windows no lo permite, Glass queda estático.
-static const UINT kGlassRefreshMs = 16;  // ~60 capturas por segundo para reducir el retraso
-typedef BOOL(WINAPI* SetWindowDisplayAffinity_t)(HWND, DWORD);
-static bool g_glassCaptureOk = false;
-
-static bool UseGlassLive() {
-    if (!g_cfg.liveAcrylic) return false;
-    return g_cfg.effect == BgEffect::Glass && g_glassCaptureOk;
-}
-
-// Se llama al abrir. Solo con Glass la ventana se excluye de la captura (así las capturas de
-// pantalla y grabaciones siguen viendo la barra con los demás efectos).
-static void ApplyCaptureAffinity() {
-    static SetWindowDisplayAffinity_t fn = [] {
-        HMODULE u = GetModuleHandleW(L"user32.dll");
-        return u ? (SetWindowDisplayAffinity_t)GetProcAddress(u, "SetWindowDisplayAffinity") : nullptr;
-    }();
-    g_glassCaptureOk = false;
-    if (!fn || !g_hwnd) return;
-    const bool want = g_cfg.effect == BgEffect::Glass && g_cfg.liveAcrylic;
-    if (fn(g_hwnd, want ? 0x00000011 /*WDA_EXCLUDEFROMCAPTURE*/ : 0 /*WDA_NONE*/)) {
-        g_glassCaptureOk = want;
-    } else if (want) {
-        Wh_Log(L"Glass: SetWindowDisplayAffinity failed (%lu), using a static capture", GetLastError());
-    }
-}
-
-static void RefreshGlassBackdrop() {
-    if (!UseGlassLive() || !g_hwnd || g_bmpW <= 0 || g_bmpH <= 0) return;
-    // La superficie ya está en pantalla (con el desplazamiento de la animación): se captura
-    // exactamente lo que hay debajo de ella.
-    CaptureBackdrop(g_winX, g_winY + (int)std::lround(g_offY), g_bmpW, g_bmpH);
-    MarkDirty();
 }
 
 // Prepares the acrylic background for the next opening.
@@ -4468,6 +4474,7 @@ static void OnTextChanged() {
     RunSearch();
     g_sel = 0;
     g_scrollTarget = 0;
+    UpdateTargets(false, /*followSelection=*/true);  // layout/selection follow the new results
     g_copiedAt = -1e9;  // typing again clears the calculator "Copied" flash
     if (g_hwnd) KillTimer(g_hwnd, TIMER_COPY);
     ResetBlink();
@@ -4808,9 +4815,9 @@ static void EnsureGlow() {
     MakeFadeBrush(g_pal.accent2, g_pal.light ? 0.26f : 0.30f, D2D1::Point2F(1, 1), g_glow2);
 }
 
-// Cada ventana de acrylic mide exactamente lo mismo que su card (nada de márgenes), así que no
-// depende de recortar con SetWindowRgn (DWM lo ignora con el acrylic). Las esquinas redondeadas
-// las pone DWM en Windows 11 (DWMWCP_ROUND) y en Windows 10 una región como respaldo.
+// Each acrylic window is exactly the size of its card (no margins), so it does not depend on
+// clipping with SetWindowRgn (DWM ignores it with acrylic). The rounded corners come from DWM on
+// Windows 11 (DWMWCP_ROUND) and from a region as a fallback on Windows 10.
 static void LivePlaceWindow(HWND wnd, int idx, int x, int y, int w, int h) {
     if (!wnd) return;
     if (w < 4 || h < 4) {
@@ -4822,20 +4829,35 @@ static void LivePlaceWindow(HWND wnd, int idx, int x, int y, int w, int h) {
         g_liveRgnSize[idx][1] = h;
         const int d = (int)std::lround(kRadius * (float)g_scale * 2.f);
         HRGN rgn = CreateRoundRectRgn(0, 0, w + 1, h + 1, d, d);
-        SetWindowRgn(wnd, rgn, TRUE);  // el sistema se queda con rgn
+        SetWindowRgn(wnd, rgn, TRUE);  // the system takes ownership of rgn
     }
+    // Acrylic windows are slow to move on some Windows 10 builds, so the window is only touched
+    // when its rect changed, it is hidden, or something got between it and g_hwnd. Both acrylic
+    // windows sit right below g_hwnd, in either order.
+    const bool visible = IsWindowVisible(wnd) != FALSE;
+    const HWND above = GetWindow(wnd, GW_HWNDPREV);
+    const bool stacked = above == g_hwnd ||
+                         ((above == g_liveWnd || above == g_livePanel) && above &&
+                          GetWindow(above, GW_HWNDPREV) == g_hwnd);
+    int* last = g_livePos[idx];
+    if (visible && stacked && last[0] == x && last[1] == y && last[2] == w && last[3] == h) return;
+    last[0] = x;
+    last[1] = y;
+    last[2] = w;
+    last[3] = h;
     UINT flags = SWP_NOACTIVATE;
-    if (!IsWindowVisible(wnd)) flags |= SWP_SHOWWINDOW;
-    // insertAfter = g_hwnd  ->  queda justo DEBAJO de g_hwnd.
+    if (!visible) flags |= SWP_SHOWWINDOW;
+    if (stacked) flags |= SWP_NOZORDER;
+    // insertAfter = g_hwnd  ->  ends up right BELOW g_hwnd.
     SetWindowPos(wnd, g_hwnd, x, y, w, h, flags);
 }
 
-// Llamar desde Present(): mantiene la ventana del acrylic alineada con g_hwnd.
+// Call from Present(): keeps the acrylic window aligned with g_hwnd.
 static void LiveSync() {
     if (!g_liveWnd) return;
 
-    // Sin WS_EX_LAYERED no hay fade global. El acrylic aparece cuando la card ya es visible a
-    // ~40% y desaparece al empezar a cerrarse (la capa de arriba sí hace fade completo).
+    // Without WS_EX_LAYERED there is no global fade. The acrylic appears once the card is already
+    // ~40% visible and disappears as soon as it starts closing (the top layer does fade fully).
     if (g_alpha < 0.4) {
         if (IsWindowVisible(g_liveWnd)) ShowWindow(g_liveWnd, SW_HIDE);
         if (g_livePanel && IsWindowVisible(g_livePanel)) ShowWindow(g_livePanel, SW_HIDE);
@@ -4863,7 +4885,7 @@ static void LiveSync() {
     }
 }
 
-// Sombra que NO pinta dentro de la card (si no, taparía el acrylic de la ventana de abajo).
+// Shadow that does NOT paint inside the card (otherwise it would cover the acrylic window below).
 static void DrawShadowRing(float x, float y, float w, float h, float alpha) {
     if (!g_d2d || !g_rt) return;
     const float s = (float)g_scale;
@@ -4935,14 +4957,14 @@ static void DrawCard(float x, float y, float w, float h, float alpha) {
     D2D1_ROUNDED_RECT card = D2D1::RoundedRect(D2D1::RectF(x, y, x + w, y + h), kRadius * s, kRadius * s);
 
     if (live) {
-        // El fondo y el tinte los pone DWM en g_liveWnd. Aquí solo va una capa casi invisible
-        // (alpha ~3/255) para que esta ventana siga recibiendo el mouse sobre la card.
+        // DWM provides the background and tint in g_liveWnd. Only a nearly invisible layer goes
+        // here (alpha ~3/255) so that this window keeps receiving the mouse over the card.
         FillRR(x, y, x + w, y + h, kRadius * s, D2D1::ColorF(0, 0, 0, 1), 0.012f);
         if (ep.veil > 0.f) {
             FillRR(x, y, x + w, y + h, kRadius * s, D2D1::ColorF(1.f, 1.f, 1.f, 1.f), ep.veil * alpha);
         }
         if (ep.glow) DrawGlow(card, x, y, w, h, alpha);
-        if (g_cfg.effect != BgEffect::Acrylic) {  // el acrylic de DWM ya trae su propio grano
+        if (g_cfg.effect != BgEffect::Acrylic) {  // DWM's acrylic already has its own grain
             EnsureNoiseBrush();
             if (g_noiseBrush && ep.noiseMul > 0.f) {
                 g_noiseBrush->SetOpacity(std::min(1.f, alpha * ep.noiseMul));
@@ -4978,7 +5000,7 @@ static void DrawCard(float x, float y, float w, float h, float alpha) {
         g_rt->FillRoundedRectangle(&body, g_gradBrush);
     }
 
-    // El borde antialiased tapa el borde "dentado" que deja la región de DWM.
+    // The antialiased border hides the "jagged" edge that the DWM region leaves.
     SetBrush(g_pal.border, alpha);
     D2D1_ROUNDED_RECT outer = D2D1::RoundedRect(D2D1::RectF(x + 0.5f, y + 0.5f, x + w - 0.5f, y + h - 0.5f),
                                                 kRadius * s, kRadius * s);
@@ -5145,9 +5167,15 @@ static void DrawDetailsPanel(AppEntry& app, const AppDetails& d) {
     const float ph = (float)DetailsPanelH() * s;   // always the same as the search bar
     const float pad = kPanelPad * s;
 
-    DrawCard(ox, oy, pw, ph, a);
+    // With live acrylic the DWM window behind the panel is only pw * a wide while it opens or
+    // closes (see LiveSync), so it sweeps. The card's own layers (shadow, veil, glow, grain, rim,
+    // border) and the content clip use that same width; at full width they would only fade and
+    // would not follow the window.
+    const float cardW = UseLive() ? std::max(1.f, pw * a) : pw;
 
-    D2D1_RECT_F clip = D2D1::RectF(ox, oy, ox + pw, oy + ph);
+    DrawCard(ox, oy, cardW, ph, a);
+
+    D2D1_RECT_F clip = D2D1::RectF(ox, oy, ox + cardW, oy + ph);
     g_rt->PushAxisAlignedClip(&clip, D2D1_ANTIALIAS_MODE_ALIASED);
 
     const float icon = 44 * s;
@@ -5393,7 +5421,7 @@ static void DrawCalcHistory(float cx, float listTop, float cw) {
         const float resRight = rowX1 - 14 * s - hintW;
 
         // The result takes the width it needs (up to ~62% of the row) so longer values such as
-        // "1,000 MB  (binario 1,024 MB)" stay readable; the expression gets what is left.
+        // "1,000 MB  (binary 1,024 MB)" stay readable; the expression gets what is left.
         const std::wstring res = L"= " + g_calcHist[i].resFmt;
         const float maxResW = (rowX1 - rowX0) * 0.62f;
         const float resW = std::min(TextWidth(res.c_str(), g_fmtHint) + 6 * s, maxResW);
@@ -5836,19 +5864,16 @@ static void FinishHide() {
         g_frameTimerOn = false;
     }
     KillTimer(g_hwnd, TIMER_BLINK);
-    KillTimer(g_hwnd, TIMER_GLASS);
     KillTimer(g_hwnd, TIMER_COPY);
     KillTimer(g_hwnd, TIMER_CALC);
     g_calcPending = false;
-    KillTimer(g_hwnd, TIMER_CALC);
-    KillTimer(g_hwnd, TIMER_CALC);
-    KillTimer(g_hwnd, TIMER_CALC);
     ShowWindow(g_hwnd, SW_HIDE);
     LiveHide();
     g_vis = Vis::Hidden;
     g_lastHide = NowSec();
     ReleaseBackdrop();
     ReleaseResultLayouts();
+    Sound::Suspend();
     MaybeReindexInBackground();  // changes detected while it was open
 }
 
@@ -5877,7 +5902,7 @@ static void ShowLauncher() {
         return;
     }
     LoadPalette();
-    // Con acrylic en vivo en Windows 11 las esquinas las redondea DWM (radio fijo ~8 px).
+    // With live acrylic on Windows 11, DWM rounds the corners (fixed radius ~8 px).
     kRadius = (UseLive() && g_liveWin11) ? 8.f : 20.f;
     if (!EnsureTarget()) {
         return;
@@ -5930,12 +5955,9 @@ static void ShowLauncher() {
     if (g_winX + g_bmpW > mi.rcMonitor.right) g_winX = mi.rcMonitor.right - g_bmpW;
     if (g_winX < mi.rcMonitor.left) g_winX = mi.rcMonitor.left;
 
-    ApplyCaptureAffinity();
     // Acrylic: capture the desktop now, with the window still hidden.
     PrepareBackdrop();
     if (UseLive()) {
-        g_liveRgnValid = false;
-        g_liveAlpha = -1;
         LiveApplyAccent();
     }
 
@@ -5950,10 +5972,10 @@ static void ShowLauncher() {
     Present();
     ShowWindow(g_hwnd, SW_SHOW);
     ForceForeground(g_hwnd);
+    Sound::Resume();
     Sound::OnOpen();
 
     SetTimer(g_hwnd, TIMER_BLINK, 530, nullptr);
-    if (UseGlassLive()) SetTimer(g_hwnd, TIMER_GLASS, kGlassRefreshMs, nullptr);
     StartFrameTimer();
 
     if (!g_indexing && ShouldReindexOnOpen()) {
@@ -6339,6 +6361,7 @@ static bool HandleKeyDown(WPARAM vk) {
                 g_calcPending = false;
                 UpdateCalc();
                 RunSearch();
+                UpdateTargets(false, /*followSelection=*/true);
             }
             // A highlighted history row inserts its result into the expression. This works for any
             // recognised maths text, valid or still being composed (e.g. "2+2+").
@@ -6351,7 +6374,7 @@ static bool HandleKeyDown(WPARAM vk) {
             if (CalcOk() && g_results.empty()) {
                 AddCalcHistory(g_text, g_calcDisplay, g_calc.insertable);
                 SetCalcAns(g_calc.value);
-                CopyTextToClipboard(g_calcDisplay);
+                CopyTextToClipboard(CalcClipboardText());
                 g_copiedAt = NowSec();
                 g_histScroll = 0;
                 g_calcHistSel = -1;
@@ -6564,13 +6587,8 @@ static LRESULT CALLBACK LauncherWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
                 g_histScroll = 0;
                 UpdateCalc();
                 RunSearch();
+                UpdateTargets(false, /*followSelection=*/true);
                 MarkDirty();
-            } else if (wp == TIMER_GLASS) {
-                if (g_vis == Vis::Hidden || !UseGlassLive()) {
-                    KillTimer(g_hwnd, TIMER_GLASS);
-                } else if (g_vis != Vis::Hiding) {
-                    RefreshGlassBackdrop();
-                }
             } else if (wp == TIMER_BLINK) {
                 if (g_vis == Vis::Shown && GetForegroundWindow() != g_hwnd &&
                     NowSec() - g_shownAt > 0.5) {
@@ -6748,6 +6766,7 @@ static LRESULT CALLBACK LauncherWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
         case WM_APP_SETTINGS: {
             const bool oldHideUtility = g_cfg.hideUtility;
             LoadSettings();
+            Sound::Configure();
             Sound::ApplyVolume();
             if (g_cfg.hideUtility != oldHideUtility) {
                 g_menuDirty = true;  // the index must be rebuilt to apply this
@@ -6782,7 +6801,7 @@ static DWORD WINAPI UiThreadProc(LPVOID) {
     LoadCalcHistory();
     LoadCalcAns();
     LoadPalette();
-    Sound::Init();
+    if (g_cfg.sounds) Sound::Init();
     Sound::ApplyVolume();
 
     HINSTANCE hInst = GetModuleHandleW(nullptr);
