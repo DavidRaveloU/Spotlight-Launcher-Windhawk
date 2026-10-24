@@ -113,7 +113,8 @@ Everything is reachable without touching the mouse.
 | **Ctrl + R** | Reindex the app list |
 | Mouse wheel | Scroll the list without changing the selection |
 | Mouse hover | Highlight the row under the cursor |
-| **Ctrl + 1…6** | Jump to a file location (Home, Downloads, Documents…) |
+| **Ctrl + 1…9** | Jump to a location or drive chip (Home, Downloads, …, `C:`, `D:`) |
+| **Ctrl + Tab** / **Ctrl + Shift + Tab** | Switch to the next / previous drive (`C:`, `D:`, `X:`, …) |
 | **Ctrl + L** / **Alt + D** | Edit the current folder path |
 | **F2** | Rename the highlighted file or folder |
 | **Ctrl + Shift + N** | Create a folder |
@@ -150,7 +151,10 @@ With **Web search** on, a **Search the web for …** result appears at the end o
 Searching for a common settings page (for example `bluetooth`, `display`, `sound`, `update`, `wifi`, `storage` or `power`) also offers a **Setting** result that opens the matching page in the Settings app. These need no prefix and appear after your app matches; a valid calculation hides them, just like the web result.
 
 ### Files
-A folder button at the right of the search box switches between apps and files (the **Tab** key does the same, except while a calculation is on screen). The **File browser** setting can turn the whole mode off, hiding the button and leaving Tab for the app list. In file mode the bar shows a **Files** chip (folder icon, name and a close button), a row of location chips with their own icons (**Home**, **Downloads**, **Documents**, **Pictures**, **Music**, **Videos**) and a **path bar** with the folder you are in. When the path is long, only the start is shortened (`…\MDG\logs`) so the last folders stay visible.
+A folder button at the right of the search box switches between apps and files (the **Tab** key does the same, except while a calculation is on screen). The **File browser** setting can turn the whole mode off, hiding the button and leaving Tab for the app list. In file mode the bar shows a **Files** chip (folder icon, name and a close button), a row of location chips with their own icons (**Home**, **Downloads**, **Documents**, **Pictures**, **Music**, **Videos**) and a **path bar** with the folder you are in. When you have two or more drives, **a second row of drive chips** (`C:`, `D:`, `X:`, … with a disk icon) appears below the location row. When the path is long, only the start is shortened (`…\MDG\logs`) so the last folders stay visible.
+
+* **Other drives**: the location chips live inside your user profile; a **second row of drive chips** below them covers everything else. One chip is added per fixed or removable drive that is ready — an empty card reader or a disconnected network drive is skipped, so nothing ever pops a *there is no disk* dialog — and the row appears only when you have two or more drives. **Ctrl + Tab** cycles forward through the drive chips and **Ctrl + Shift + Tab** backward; **Ctrl + 1…9** jumps straight to a chip (locations first, then drives); and you can always type a path such as `D:\` in the path bar. Going up from a drive root (**←**, **Backspace** or **Alt + ↑**) opens a **This PC** view listing every drive, so you can hop between drives with the arrows alone. Which drive the browser opens on the first time you use it in a session is set by the **Start drive** option (empty opens on Home, and so does an unavailable drive).
+* **Moved folders**: the location chips resolve to each folder's real location, so Home, Downloads, Documents, Pictures, Music and Videos keep working even when Windows has moved them to another drive or redirected them (such as a OneDrive-backed Documents).
 
 * **Browse inside the launcher**: **Enter** (or **→**) on a folder goes into it; **Enter** on a file opens it. The list shows folders first, with a metadata line (type, size, date and the containing folder). Images show a **thumbnail preview**; other files show a **type icon** based on their extension (PDF, DOC, XLS, JSON, code, audio, video, archives, …). Very large folders stop at 5,000 folders and 5,000 files, and the path bar shows how many of the total are listed; typing searches past that cap. Previews are decoded in the background (skipped for files on network drives and cloud placeholders, which could otherwise block the bar while they download); extremely wide or tall images are center-cropped to fill the square without stretching.
 * **Deep search**: whatever you type is searched in the current folder *and all its subfolders* (results show the folder they live in). Closer matches come first and appear while the search is still running. Dot-folders such as `.claude` are included; other hidden/system items and offline/cloud folders are skipped. The scan stops when the bar closes.
@@ -175,12 +179,13 @@ For example `report *.pdf` or `dir: projects`.
 | Shortcut | Action |
 | --- | --- |
 | **Enter** / **→** | Open the file / enter the highlighted folder |
-| **←** (empty box) | Go to the parent folder |
-| **Backspace** (empty box) | Go up one folder (at a location root it leaves file mode) |
+| **←** (empty box) | Go to the parent folder (from a drive root, the **This PC** drives view) |
+| **Backspace** (empty box) | Go up one folder (a drive root goes to **This PC**; a location root leaves file mode) |
 | **Alt + ← / →** | Back / forward in the folder history (mouse back/forward buttons too) |
 | **Alt + ↑** | Parent folder |
 | **Alt + Home** | Home |
-| **Ctrl + 1…6** / **Ctrl + ←/→** (empty box) | Jump to a location chip |
+| **Ctrl + 1…9** / **Ctrl + ←/→** (empty box) | Jump to a location or drive chip |
+| **Ctrl + Tab** / **Ctrl + Shift + Tab** | Switch to the next / previous drive (`C:`, `D:`, `X:`, …) |
 | **Ctrl + L** / **Alt + D** | Edit the path |
 | **Ctrl + I** | Actions menu |
 | **Ctrl + Enter** | Show in your default file manager |
@@ -241,6 +246,7 @@ Gentle sounds play as you use the launcher: one when the bar opens, a soft rise 
 ### Appearance
 * Six background effects (**Acrylic**, **Mica**, **Glass**, **Frosted**, **Aurora**, **Solid**) and 12 colours.
 * Each effect is built from a blurred view of whatever is behind the bar, finished with a colour tint, subtle grain and light highlights, so the bar looks the same on Windows 10 and 11.
+* The blurred effects (every one except **Solid**) need Windows' **Transparency effects** turned on (**Settings → Personalization → Colours → Transparency effects**). Windows draws no blur when it is off, so these effects fall back to a flat colour; switch to **Solid** or turn Transparency effects back on for the intended look.
 * **Live acrylic**: Acrylic, Glass, Frosted and Aurora follow what is behind the bar in real time. Turning it off uses a single snapshot taken when the bar opens, which helps performance and saves battery.
 * Adjustable panel opacity, blur strength and layout. Blur strength applies to Mica, and to the other effects while Live acrylic is off; with it on, Windows sets their blur strength.
 * Looks sharp on every monitor, even high-resolution ones or a mix of several.
@@ -283,7 +289,7 @@ The settings page groups the options into **Appearance**, **Behavior**, **Shortc
 | List mode | `Expanded` | Compact = bar only; Expanded = recents and suggestions when empty. |
 | Vertical position | `30%` | Where the bar sits, from the top edge (0) to the bottom edge (100). |
 | Panel opacity | `90%` | How solid the colour is (70–100). Ignored by **Solid**. |
-| Background effect | `Acrylic` | Acrylic, Mica, Glass, Frosted, Aurora or Solid. |
+| Background effect | `Acrylic` | Acrylic, Mica, Glass, Frosted, Aurora or Solid. The blurred ones need Windows' **Transparency effects** on (Settings → Personalization → Colours); with it off they fall back to a flat colour. Solid is unaffected. |
 | Live acrylic (real time) | `On` | Keeps Acrylic, Glass, Frosted and Aurora updating live. Turn it off to save power. |
 | Blur strength | `50` | How strong the blur is. Applies to **Mica**, and to the other effects only while Live acrylic is off. Ignored by **Solid**. |
 | Colour | `Midnight blue` | Background, selection highlight and matching letters. 12 options. |
@@ -315,6 +321,7 @@ The settings page groups the options into **Appearance**, **Behavior**, **Shortc
 | Setting | Default | What it does |
 | --- | --- | --- |
 | File browser | `On` | Adds the Files mode (Tab and the folder button). When off, Tab just moves the selection. |
+| Start drive | *(empty)* | Drive letter the file browser opens on the first time it is used in a session (e.g. `D`). Empty, or a drive that is not available, opens on Home. |
 | Calculator | `On` | Shows the result as you type a calculation; Enter copies it. |
 | Calculator display | `Card and inline text` | Card, inline text, or both. |
 | Web search | `On` | Shows a "Search the web for …" result for what you type; Enter opens it in your browser. A web address opens directly. |
