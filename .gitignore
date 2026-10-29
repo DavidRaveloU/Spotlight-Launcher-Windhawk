@@ -32,3 +32,7 @@ ehthumbs.db
 *.bak
 *.orig
 *.tmp
+
+# Working documents and the local compile mock (not part of the mod)
+odd/
+windhawk_mock.h
