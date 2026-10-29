@@ -8,6 +8,194 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Releases are listed **newest first**. Sections are only ever added: a new version gets a
 > new entry on top and the previous ones are kept exactly as they were.
 
+## [1.0.0] - 2026-10-29
+
+Files, the clipboard, your open windows and Everything, in one bar.
+
+### Added
+
+- **Clipboard history.** An opt-in feature (off by default) that keeps the last 30 things you copied
+  and adds a `clip:` prefix to search them. **Enter** pastes the selected entry into the window you
+  came from, **Ctrl + Enter** copies it, **Ctrl + D** pins it, **Ctrl + Shift + R** removes it, and
+  the **Clear Clipboard History** command erases everything. Everything is encrypted for the current
+  Windows account (DPAPI) before it is written, turning the feature off erases it, and copies that an
+  app marks as private (password managers) are skipped.
+- **Images in the clipboard history.** Copied pictures are kept too: each one is saved as a
+  compressed PNG inside the mod's own folder (scaled down to 2560 px on its long side when bigger),
+  shows its own thumbnail in the list, and pastes back as an image. The file name is a hash of the
+  pixels, so copying the same picture twice reuses one file and one entry. `clip: image` narrows the
+  list to pictures.
+- **Clipboard retention.** A **Clipboard retention (days)** setting (3 by default) deletes entries
+  older than that, deleting their image files with them; pinned entries never expire, and `0` keeps
+  entries until the 30-entry limit drops them. Files with no entry are cleaned up on load.
+- **Pinned clipboard entries.** Pinned entries stay at the top of `clip:` and survive both the
+  30-entry trim and the retention.
+- **Recent files.** The empty bar gains a **Recent files** section with the files and folders from
+  Windows' Recent list, and `recent:` searches them. Enter opens, Ctrl+Enter opens the folder,
+  Ctrl+Shift+C copies the path. Read locally from the Recent folder; can be turned off in the
+  settings. Windows must be recording recent items (Settings → Personalization → Start), or the list
+  stays empty.
+- **Global file search.** `find:` searches file and folder names under Home (Documents, Downloads,
+  Desktop, Pictures and the rest) and any extra folders configured in the settings. It runs in a
+  worker thread, shows partial results while scanning, stops when the bar closes, and builds no
+  index. Enter opens, Ctrl+Enter opens the folder, Ctrl+Shift+C copies the path.
+- **Window switcher.** `win:` lists the open windows with their title and process; **Enter** activates
+  the selected one (restoring it if minimized). Launching a classic desktop app that already has a
+  visible window now focuses it instead of starting a second instance; launches with arguments and
+  packaged apps keep their normal behaviour.
+- **Coloured feedback.** Anything the launcher has to tell you now carries a colour and a small dot
+  in the footer: green when something is done (**Copied**), amber when it had to work around a problem
+  (**Everything not running · built-in scan**) and red for what needs care (a destructive command
+  asking for a second Enter, a path that does not exist, a preview that could not be opened). The
+  empty list uses the same language: the accent while it is still searching, amber when a problem is
+  the reason it is empty.
+- **Everything as an optional index.** With **File search engine** set to **Everything** (voidtools),
+  both `find:` and the deep search inside Files go to Everything's IPC instead of scanning: every
+  drive (or just the folder you are browsing), answers in milliseconds, and Everything's own syntax
+  (`*.pdf`, `"exact phrase"`, `!excluded`). No DLL is shipped or loaded, the built-in scan stays the
+  default, and it takes over automatically when Everything is not running or does not answer within a
+  second, with the footer saying *Everything not running · built-in scan*.
+- **Sort the Files list.** **Ctrl + S** (or **Sort…** in the actions menu) opens a sort list with the
+  order in use marked: name (A-Z and Z-A), type, modified date (newest and oldest) and size (largest
+  and smallest). Folders stay on top, the order also applies while filtering, and deep-search results
+  keep their relevance order. **Remember file sort** (off by default) keeps the chosen order across
+  closes and restarts; while it is off the order only lives while the bar is open and Files starts
+  again at Name (A-Z).
+- **Learning from your choices.** Picking an app after typing a few words puts that app first the next
+  time you type those same words — even when it was a weak match (`ex` + **Firefox** puts Firefox
+  above Excel). One pick is enough, only those words are affected, the pairs live in the mod storage
+  (capped at 200, forgotten after 90 days without a pick), and **Learn from your choices** in the
+  settings turns it off.
+- **Modes as results.** Typing the name of a mode (for example **Open Windows** — also found by
+  *windows manager* or *switcher* — **Bookmarks**, **Clipboard History**, **Recent Files**, **All
+  Files** or **Commands**) shows it as one more result, like an app; **Enter** switches into that mode
+  and fills in its prefix, so the prefixes are optional. A mode row only appears while its feature is
+  enabled, and it never filters: `win: chrome` is still how a list is narrowed.
+
+### Changed
+
+- **The Settings tab is grouped by what each option configures**: Appearance, Behavior, Shortcuts,
+  Apps, Search (web search, bookmarks, recent files, learning and the file search engine), Files
+  (browser, start drive, remembered sort), Clipboard, Calculator and Sounds. Options that moved
+  between sections keep their saved values; the tab shows the defaults until you save it once, so it
+  is worth a look the first time.
+- **The F1 sheet** lists every shortcut, prefix and filter (including the newer ones: sort, preview,
+  pin, the clipboard keys and the mode names) and scrolls with the wheel or the arrow keys when a
+  page is taller than the bar.
+- **Feedback has a colour**: green when something is done, amber when a problem had to be worked
+  around and red for what needs care, with a small dot in the footer and the same tones in the empty
+  list and the error bands.
+
+### Fixed
+
+- Disabled features no longer claim their prefixes: `bm:`, `clip:` and the web prefixes (`?`, `g:`,
+  `b:`, `d:`, `y:`, `w:`) are only recognized while the matching feature is enabled; otherwise the
+  text is searched as a normal query.
+
+## [0.10.0] - 2026-10-28
+
+A launcher that learns which apps you actually use.
+
+### Added
+
+- **Pinned apps.** **Ctrl + D** (or **Pin to top** in the details panel) keeps the selected app in a
+  new `Pinned` section at the top of the empty bar; the same action unpins it. Pins are stored per
+  user and survive restarts and app reindexing, and a pinned app gets a small boost when it matches.
+- **Frecency ranking.** Usage is now weighted by recency: a recently and frequently used app rises
+  among similar matches, with a 30-day half-life so old counts fade. The bonus stays below the next
+  match tier, so exact, prefix and word-start name matches still win.
+
+### Changed
+
+- Suggestions are ordered by frecency instead of the raw use count.
+
+## [0.9.0] - 2026-10-28
+
+Your bookmarks and your own shortcuts, next to your apps.
+
+### Added
+
+- **Browser bookmarks.** An optional feature (off by default) that adds the bookmarks of every
+  Chrome, Edge, Brave, Vivaldi, Chromium and Opera profile (Beta, Dev, Canary and Nightly builds
+  included), plus Firefox, Waterfox, LibreWolf, Zen and Floorp, to the search. Rows carry a gold
+  star and show the folder and browser they come from; **Enter** opens the page and
+  **Ctrl + Enter** copies the address. The same URL saved in two profiles is listed once, up to
+  three matches appear below your app matches, and `bm:` searches bookmarks alone. Only each
+  profile's bookmark file (Firefox's compressed backups for the Firefox family) and its name are
+  read, locally: no history, cookies, passwords, favicons or network. Chromium changes are picked up
+  the next time the bar opens; Firefox follows its own backup schedule.
+- **Entry triggers.** Every custom entry can have a typed alias in the manager: typing `yt cats`
+  runs the *YouTube* entry at once, selected at the top of the list, passing `cats` as its
+  `{query}` (or pre-filling its first required field when it has no `{query}`). The app matches
+  stay below, so an alias never blocks them.
+- **Per-entry shortcuts.** An entry can own a key combination (Ctrl+Alt+T, for example) that runs it
+  while the launcher is open. The launcher matches it in its own window, so it never takes a
+  combination away from Windows or another application and never fires while the bar is closed.
+  Entries that ask for values open their form; the rest launch directly.
+
+### Changed
+
+- **Custom entries are managed in the launcher itself.** The editor now has seven fields (name,
+  type, target, arguments, keywords, trigger and shortcut), sized so all of them fit at once.
+- The docs and the settings reference now point to the in-app **Custom entries** manager instead of
+  a settings list that never existed.
+
+## [0.8.1] - 2026-10-25
+
+Custom entries now ask for their values.
+
+### Added
+
+- **A form for custom entries.** When an entry's required values are still empty, selecting it opens a
+  keyboard-first form instead of launching with something missing: **Tab** and the arrows move
+  between fields, **Enter** runs, **Esc** goes back, and **Shift + Enter** opens the form even when
+  every value is already filled (so a pre-filled one can be changed). The form previews the final
+  address, path or command as you type and keeps the usual text-editing keys.
+- **Placeholders beyond `{query}`.** Any name can be used in a target or its arguments: `{folder}`
+  (required), `{folder?}` (optional), `{branch=main}` (pre-filled, `{branch?=main}` for optional and
+  pre-filled) and `{query}` (the extra words typed after the entry's name). Names are
+  case-insensitive and ignore spaces, `_` and `-`, `{{` and `}}` are literal braces, and a value
+  used twice is only asked once.
+- **Problems are reported before launching.** A missing path, an unknown program, or arguments typed
+  into the target now show up in the form with a clear message instead of the entry silently doing
+  nothing. A bare program name that the shell may still resolve through an installed app only asks
+  for a second Enter.
+
+### Changed
+
+- **Only `{query}` is URL-encoded** in a Website target; values from other fields are inserted
+  exactly as typed, so a field can carry a path, a `user/repo` value or a whole base address without
+  its slashes and colons being escaped.
+
+## [0.8.0] - 2026-10-25
+
+A smarter app list and your own entries next to it.
+
+### Added
+
+- **Desktop shortcuts in the app list.** The index now also reads the two Desktop folders (yours
+  and the shared one), so portable programs and shortcuts that installers only put on the Desktop
+  are found like any other app. Only shortcuts that really start a program are used; documents,
+  missing targets and Windows' Store-app aliases are left out. The automatic index notices
+  shortcuts added to or removed from the Desktop as well.
+- **Custom entries.** The launcher gains its own keyboard-first **Custom entries** manager for your
+  own websites, files, folders and commands (open it by searching for *Custom Entries*). Each entry
+  has a name, a type (**Website**, **File or folder**, **Command**), a target, optional arguments
+  and optional search keywords. Entries are searched like apps (no prefix) and appear after the
+  matching apps. `{query}` in the target or arguments is replaced with the extra words you type
+  after the entry's name — for websites it is URL-encoded — so an entry named *YouTube* with the
+  target `https://www.youtube.com/results?search_query={query}` turns **YouTube cats** into a
+  YouTube search for "cats", and a command such as `wt.exe -d {query}` opens Windows Terminal where
+  you typed.
+
+### Changed
+
+- **Nothing is listed twice.** Apps are now identified by what they actually run (the program and
+  its arguments, or the packaged app id) instead of by their display name. A shortcut that exists
+  in both the Start menu and the Desktop, or one installed for all users and for one user, shows
+  up once. Two different programs that happen to share a name are both kept and get a short
+  suffix (the program's folder, or **Store**) so the rows can be told apart.
+
 ## [0.7.1] - 2026-10-24
 
 Multiple-drive support in the file browser.
