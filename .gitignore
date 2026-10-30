@@ -36,3 +36,5 @@ ehthumbs.db
 # Working documents and the local compile mock (not part of the mod)
 odd/
 windhawk_mock.h
+AGENTS.md
+.atl/
