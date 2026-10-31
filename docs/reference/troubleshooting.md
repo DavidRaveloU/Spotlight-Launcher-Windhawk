@@ -11,6 +11,7 @@
 - [Missing results](#missing-results)
 - [Clipboard](#clipboard)
 - [Files and previews](#files-and-previews)
+- [Windows and other programs](#windows-and-other-programs)
 - [After an update](#after-an-update)
 - [What the mod stores](#what-the-mod-stores)
 - [Reporting a problem](#reporting-a-problem)
@@ -93,6 +94,36 @@ elevated app, for example), the entry stays on the clipboard so you can paste it
 
 Previews are skipped for files on network drives and for cloud placeholders, which could otherwise
 block the bar while they download. The file still opens normally with **Enter**.
+
+## Windows and other programs
+
+### A window stays above everything else
+
+It was pinned with **Ctrl + Shift + T** in `win:`. That state belongs to the window, not to the
+launcher, so it survives closing the bar. Open `win:`, find the row — it wears a **gold pin** on its
+icon and says **On top** — and press **Ctrl + Shift + T** again.
+
+### I cannot close or move a window
+
+Windows blocks cross-process work between programs of different integrity levels. A window whose
+program runs **as administrator** cannot be closed, minimized or moved from the launcher, and the
+footer says *Needs administrator · can't control that window* in amber.
+
+The same message frame covers the other cases: *No other monitor in that direction* on a single-monitor
+setup, nothing at all when the window has already closed (the row is re-read and disappears), and the
+same amber notice when a window that stopped responding never reacts to the action — the launcher stays
+usable the whole time.
+
+### `find:` shows folders Explorer does not
+
+With **File search engine** set to **Everything**, the answers come from its index, which includes
+hidden folders such as `AppData` or `ProgramData`. The built-in scan skips them. Switch the engine
+back to **Built-in scan** if you only want what Explorer would show you.
+
+### The bar closes when I minimize a window
+
+That was a bug before 1.1.0: minimizing took the focus away and the launcher treated it as a click
+outside. From 1.1.0 the bar stays open for every window action, and gives itself the keyboard back.
 
 ## After an update
 

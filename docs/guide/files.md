@@ -71,7 +71,8 @@ results keep their relevance order.
 
 ## Filters
 
-Combine them with normal text, in any order; the active filters are shown in the path bar.
+Combine them with normal text, in any order; the active filters are shown in the path bar, and they
+apply to the folder listing, to the deep search and to `find:`.
 
 | Filter | Meaning |
 | --- | --- |
@@ -79,8 +80,33 @@ Combine them with normal text, in any order; the active filters are shown in the
 | `type:image` | A category: `image`, `doc`, `audio`, `video`, `archive`, `code` |
 | `dir:` / `folder:` | Only folders (`dir:logs` = folders named logs) |
 | `file:` | Only files |
+| `size:` | A size or a range, in binary units: `>10mb`, `<500kb`, `1mb..10mb` |
+| `modified:` / `date:` | A date or a range: `today`, `yesterday`, `week`, `month`, `year`, `2026-10-31`, `>2026-06-01`, `<2026-06-01` |
 
-For example `report *.pdf` or `dir: projects`.
+For example `report *.pdf`, `dir: projects`, `size:>100mb` or `modified:today`.
+
+### Size
+
+- Units: `b`, `kb`, `mb`, `gb` (1024-based, so `1mb` = 1,048,576 bytes). A number without a unit is
+  bytes.
+- `size:>10mb` = more than 10 MB, `size:<500kb` = less, `size:1mb..10mb` = the range.
+- A bare value means **at least**: `size:10mb` is the same as `size:>10mb`.
+- Folders have no size, so any size filter hides them.
+
+### Dates
+
+- `today`, `yesterday`, `week` (last 7 days), `month` (last 30), `year` (last 365).
+- A date (`2026-10-31`, or `2026/10/31`) covers **that whole day**, in your local time.
+- `>2026-06-01` starts the day after, `<2026-06-01` ends before that day.
+- A space after the operator is fine: `size:> 1mb` and `modified: today` are read the same way.
+
+### What the filters see
+
+- The listing and the built-in deep search read the real size and date from disk.
+- With **Everything**, its index supplies both, so the same filters work there too.
+- A row whose size or date is unknown is **left out** when one of those filters is active: the launcher
+  does not guess.
+- Combining a folder filter with a size filter (`dir:logs size:>1mb`) matches nothing, on purpose.
 
 ## Deep search
 
@@ -97,6 +123,13 @@ instead: instant, still restricted to the current folder, and still applying the
 
 **Ctrl + Q** previews the selected file in the details panel: images, text and code with syntax-free
 line numbers, and the usual file details for everything else.
+
+Images are decoded at the panel's own size (up to 512 px on the long side, aspect preserved), so the
+picture is shown whole and sharp; the row thumbnail is only the placeholder until that decode lands.
+
+The panel belongs to Files: leaving the browser closes it, and a folder cannot be previewed (**Ctrl + Q**
+does nothing on one). Moving the selection onto a folder closes the panel; moving back onto a file
+reopens it.
 
 **Ctrl + I** (or your configured details key) opens a menu for the highlighted item: open, show in its
 folder, reveal in your file manager, run as administrator, terminal here, rename, copy path / name /

@@ -60,6 +60,24 @@ sheet with all of this, and it scrolls when the page is longer than the bar.
 
 More detail: [Files](../guide/files.md).
 
+## Windows mode (`win:`)
+
+These keys act on the selected window and leave the bar open. **F1** lists them inside the app too.
+
+| Shortcut | Action |
+| --- | --- |
+| **Enter** | Activate the window and close the bar |
+| **Ctrl + I** | Panel with the actions and the window's process, state and path |
+| **Ctrl + W** | Close the window (press it again to confirm) |
+| **Ctrl + M** | Minimize it |
+| **Ctrl + Shift + M** | Maximize, or restore |
+| **Ctrl + Shift + T** | Toggle always on top |
+| **Ctrl + Shift + →** / **←** | Move it to the next / previous monitor |
+| **Ctrl + Enter** | Open the folder of its `.exe` |
+| **Ctrl + Shift + C** | Copy the path of its `.exe` |
+
+More detail: [Window switcher](../guide/window-switcher.md).
+
 ## Clipboard history
 
 | Shortcut | Action |

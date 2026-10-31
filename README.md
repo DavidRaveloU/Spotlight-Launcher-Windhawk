@@ -67,13 +67,16 @@ Some of the built-in looks — the **Aurora** effect in three colours, plus **Fr
   letters that matched highlighted. Results are ranked by match quality, then by how often and how
   recently you use them, and an app you pick after typing a few letters comes first next time.
 - **Files, without a second window.** Browse your drives and folders in the bar: locations and drive
-  chips, sorting, filters (`*.pdf`, `type:image`, `dir:`), previews, and rename, copy, terminal and
-  Recycle Bin actions.
+  chips, sorting, previews, and rename, copy, terminal and Recycle Bin actions. Narrow the list with
+  `*.pdf`, `type:image`, `dir:`, and now by size and date too: `size:>10mb`, `modified:today`.
 - **Global file search.** `find:` searches file and folder names under Home and any extra folders, with
-  no index to build. Point it at **Everything** (optional) and the same queries are answered from its
-  index in milliseconds.
+  no index to build, using the same filters: `find: report size:>1mb modified:week`. Point it at
+  **Everything** (optional) and the same queries are answered from its index in milliseconds, with size
+  and date for every row.
 - **Window switcher.** `win:` lists your open windows; **Enter** brings the selected one to the front.
-  Launching an app that is already open focuses it instead of starting a second copy.
+  It can also **close**, **minimize**, **pin on top** or **move to another monitor** the selected
+  window without switching to it, and a panel shows its process, state and path. Launching an app that
+  is already open still focuses it instead of starting a second copy.
 - **Clipboard history (opt-in, encrypted).** Off by default. When on, it keeps the last 30 things you
   copied, text and images, and `clip:` searches them. Everything is encrypted for your Windows account,
   copies an app marks as private are skipped, and turning the feature off erases what it saved.
@@ -113,8 +116,8 @@ mod** in Windhawk, paste it in place of the editor contents and save.
 ## Documentation
 
 **[Read the documentation →](docs/index.md)** — installation, every prefix and command, the file
-browser, the clipboard, custom entry placeholders, the full calculator syntax, every setting and
-troubleshooting.
+browser and its filters, the window actions, the clipboard, custom entry placeholders, the full
+calculator syntax, every setting and troubleshooting.
 
 ## Contributing
 

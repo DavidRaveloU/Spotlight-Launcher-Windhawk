@@ -9,6 +9,10 @@
 Both **text and images** are kept. An image is stored compressed, shows its own thumbnail in the list,
 and copying the same image twice does not keep two copies.
 
+**A copied file is kept as its path.** Explorer puts the file itself on the clipboard plus a text
+fallback with only its name; the launcher stores the full path, so **Enter** pastes something usable —
+the path — into an address bar, a chat or a terminal.
+
 ## Using it
 
 Type `clip:` on its own to list the history, or `clip: invoice` to filter it. `clip: image` narrows the
