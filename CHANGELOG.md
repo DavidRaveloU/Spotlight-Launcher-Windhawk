@@ -8,6 +8,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Releases are listed **newest first**. Sections are only ever added: a new version gets a
 > new entry on top and the previous ones are kept exactly as they were.
 
+## [1.1.0] - 2026-10-31
+
+Windows you can act on, and file searches you can narrow by size and date.
+
+### Added
+
+- **Actions on the window switcher.** `win:` no longer only brings a window to the front. **Ctrl + M**
+  minimizes it, **Ctrl + Shift + M** maximizes or restores it, **Ctrl + Shift + T** keeps it always on
+  top, **Ctrl + Shift + ← / →** moves it to the previous or next monitor, and **Ctrl + W** closes it —
+  with a second **Ctrl + W** to confirm, because the app decides whether to ask about unsaved work.
+  **Ctrl + Enter** opens the folder of its `.exe` and **Ctrl + Shift + C** copies its path. Every action
+  leaves the bar open, so several windows can be handled in a row, and none of them steals the keyboard:
+  the bar takes it back. Every action is **posted** to the window's own thread instead of waited on, so a
+  window that stopped responding cannot freeze the launcher: the result is checked a moment later and
+  reported if the window never reacts. The close confirmation is bound to **that** window — if the
+  selection moves before the second press, it asks again instead of closing a window you never picked.
+  **Ctrl + I** shows the same card the app list uses, with the actions and the window's process, state
+  and path.
+- **Always-on-top feedback.** A window kept on top wears a gold pin on its icon, says **On top** in the
+  list and reports it in the panel, and toggling it says so in the footer. Windows has no indicator of
+  its own, so a forgotten pin is easy to spot and easy to undo.
+- **Date and size filters.** The file browser and `find:` both accept `size:>10mb`, `size:<500kb`,
+  `size:1mb..10mb`, `modified:today`, `modified:week`, `modified:2026-10-31`, `modified:>2026-06-01` and
+  the rest, mixed with the words and the existing filters in any order. Sizes are binary (`1mb` =
+  1,048,576 bytes), a lone date covers that whole day in local time, a space after the operator is
+  accepted, and a row without a known size or date is left out rather than guessed. The active filters
+  are listed in the path bar.
+
+- **Sharp image previews.** The preview panel now decodes the picture at its own size (512 px on the
+  long side, aspect preserved) instead of upscaling the 64 px square thumbnail of the row, so an image
+  is shown whole and in focus.
+- **A copied file keeps its path.** Explorer also publishes a text fallback with only the file name;
+  the clipboard history now prefers `CF_HDROP` and stores the full path, which is what you want to paste
+  into an address bar, a chat or a terminal.
+
+- **The Quick Look panel belongs to Files.** Leaving the file browser closes it, and a folder is no
+  longer previewable: **Ctrl + Q** does nothing on one, moving onto one closes the panel, and the old
+  *Cannot open file* is now *A folder has nothing to preview.*
+
+### Changed
+
+- **Everything now answers with size and date.** The query asks its index for both, so file rows from
+  Everything show the same metadata as the built-in scan instead of the type alone, and the filters are
+  translated to Everything's own syntax (`size:>=1048576`, `datemodified:>=2026-10-31`) instead of
+  filtering a handful of arbitrary matches.
+- **`find:` shows the full metadata line.** Every result reads *type · size · date · folder*, so the
+  folder no longer hides the size when the row is narrow.
+- **The footer says “Searching.”** while a `find:` scan is still running, the way Files already did.
+- **Icons for packaged apps** come from the tile image the Start menu uses, so Notepad, Terminal, Paint
+  and the rest no longer fall back to a blank page.
+
+### Fixed
+
+- **Run as administrator for packaged apps.** A full-trust package (Notepad, Terminal, Paint, Photos,
+  Snippets…) now offers the action, resolved from the executable its manifest declares; UWP apps such as
+  Calculator or Settings do not, because launching them without their package identity does nothing.
+- **Minimizing or closing a window no longer closes the launcher.** The focus the action takes away is
+  no longer read as a click outside, and the bar keeps the keyboard.
+- **A closed window leaves the list** even when the app takes a moment to shut down: Chromium-based
+  browsers destroy their window asynchronously, so the list is re-read for up to two seconds instead of
+  once.
+- **`find:` results** show their size and modified date with either engine.
+- **Clipboard history at startup.** With the feature off and nothing stored, the mod no longer creates
+  its image folder or writes empty values for accounts that never enabled it. The folder is now created
+  only when an image is actually saved, so a preview in Files cannot bring it back either, and turning
+  the feature off removes it when nothing is left.
+- **A clipboard entry stored as plain text** (only possible in the first 1.0.0 build) is re-encrypted
+  when it is loaded instead of being written back unencrypted.
+- **The clipboard image folder** is resolved once, thread-safely, so the thumbnail worker and the UI can
+  no longer write the same cached path at the same time.
+
 ## [1.0.0] - 2026-10-29
 
 Files, the clipboard, your open windows and Everything, in one bar.

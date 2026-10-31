@@ -48,10 +48,10 @@ browser bookmarks, Windows' recent files, open windows, a calculator, and a set 
 | --- | --- |
 | [Search](guide/search.md) | Matching, result order, frecency, pins, learning, the app index, web and Settings results. |
 | [Prefixes and commands](guide/prefixes-and-commands.md) | Every mode, every built-in command, and the two-step confirmations. |
-| [Files](guide/files.md) | The built-in file browser: locations, drives, sorting, filters, previews, actions. |
+| [Files](guide/files.md) | The built-in file browser: locations, drives, sorting, filters (extension, type, size and date), previews, actions. |
 | [Clipboard history](guide/clipboard.md) | Text and images, retention, pins and privacy. |
-| [File search](guide/file-search.md) | `find:` over your folders, or through Everything. |
-| [Window switcher](guide/window-switcher.md) | `win:`, and focusing an app that is already open. |
+| [File search](guide/file-search.md) | `find:` over your folders or through Everything, with the same filters. |
+| [Window switcher](guide/window-switcher.md) | `win:`: switching, closing, minimizing, pinning on top and moving windows. |
 | [Bookmarks and recent files](guide/bookmarks-and-recent.md) | Browser bookmarks and Windows' recent list. |
 | [Custom entries](guide/custom-entries.md) | Your own sites, folders and commands, with placeholders. |
 | [Calculator](guide/calculator.md) | The full syntax reference. |
