@@ -12,7 +12,7 @@ Press **Alt + Space**, type a few letters, press **Enter**. That is the whole id
   <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT">
 </a>
 <a href="https://github.com/DavidRaveloU/Spotlight-Launcher-Windhawk/blob/main/version.json">
-  <img src="https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/DavidRaveloU/Spotlight-Launcher-Windhawk/main/version.json&query=%24.version&label=version&prefix=v&color=informational" alt="Version">
+  <img src="https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/DavidRaveloU/Spotlight-Launcher-Windhawk/main/version.json&query=%24.version&label=version&prefix=v&color=informational&cacheSeconds=300" alt="Version">
 </a>
 <a href="https://www.microsoft.com/windows">
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D6" alt="Platform: Windows 10/11">
