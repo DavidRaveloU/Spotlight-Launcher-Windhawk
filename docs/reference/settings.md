@@ -27,10 +27,11 @@ The mod's **Settings** tab groups its options by what they configure: **Appearan
 | List mode | `Expanded` | Compact shows only the search bar until you type; Expanded also shows recent apps and suggestions while the box is empty. |
 | Vertical position | `30%` | Where the bar sits, from the top edge (`0`) to just above the taskbar (`100`). |
 | Panel opacity | `90%` | How solid the colour is (70–100). Ignored by **Solid**. |
-| Background effect | `Acrylic` | Acrylic, Mica, Glass, Frosted, Aurora or Solid. The blurred ones need Windows' **Transparency effects** on; Solid is unaffected. |
-| Live acrylic (real time) | `On` | Keeps Acrylic, Glass, Frosted and Aurora updating live. Turn it off to save power. |
+| Background effect | `Solid` | Acrylic, Mica, Glass, Frosted, Aurora or Solid. Solid is the default. The blurred ones need Windows' **Transparency effects** on; Solid is unaffected. |
+| Live acrylic (real time) | `Off` | Keeps Acrylic, Glass, Frosted and Aurora updating live. Off by default: the live blur is drawn by Windows in a window of its own, and while the panel animates it can trail the bar by a frame and show a slight seam. **Windows 11 only**: on Windows 10 the effect still works, always from a single snapshot taken when the bar opens. |
 | Blur strength | `50` | Applies to **Mica**, and to the other effects only while Live acrylic is off. Ignored by **Solid**. |
 | Color | `Midnight blue` | Background, selection highlight and matching letters. 12 options. |
+| Panel position | `Bar and panel centered together` | Whether the bar slides left while the panel is open, so both are centered as one block, or the bar stays centered on its own with the panel opening to its right.
 
 ## Behavior
 

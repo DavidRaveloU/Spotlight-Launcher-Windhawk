@@ -8,6 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Releases are listed **newest first**. Sections are only ever added: a new version gets a
 > new entry on top and the previous ones are kept exactly as they were.
 
+## [1.1.1] - 2026-11-03
+
+A calmer default look, and a choice about where the bar sits.
+
+### Added
+
+- **Panel position.** A new Appearance option decides what stays centered while the details panel is
+  open: the bar together with the panel (the bar slides left, the default) or the bar on its own (the
+  panel opens to its right without moving it).
+
+### Changed
+
+- **Solid is the new default background effect.** A fresh install now starts with a plain, opaque
+  colour instead of Acrylic. Anyone who already saved the settings keeps their choice. If the settings
+  tab was never saved, the mod starts from the defaults, so the effect may change after this update.
+- **Live acrylic is off by default, and it is a Windows 11 option.** The live blur is drawn by Windows
+  in a separate layer behind the bar, so while the details panel animates that layer can trail the bar
+  by a frame and leave a slight seam at the edges. Off, the same effects come from a single snapshot
+  taken when the bar opens: smoother and lighter on laptops. On Windows 10 the option is ignored and
+  the snapshot is always used, because the compositor trails the most there.
+- **The details panel wipes instead of fading in live mode.** Windows cannot fade the blur layer, so
+  the panel now animates its width with an opaque card: both layers are the same shape at every frame.
+
+### Fixed
+
+- **The last strip of the closing panel.** Below a certain width Windows collapses the rounded blur
+  layer into a minimum pill, which stayed on screen after the card had shrunk past it. The last few
+  pixels are now drawn as a tinted tail that dissolves with the card, and the blur layer is hidden
+  before it reaches that size.
+
 ## [1.1.0] - 2026-10-31
 
 Windows you can act on, and file searches you can narrow by size and date.
