@@ -8,12 +8,12 @@ Windows 10 and Windows 11.
 
 | Effect | Look |
 | --- | --- |
-| **Acrylic** | Blurred, with a light grain (the default) |
+| **Acrylic** | Blurred, with a light grain |
 | **Mica** | Blurred, closer to the desktop wallpaper's tone |
 | **Glass** | Blurred and clearly see-through |
 | **Frosted** | Blurred and soft |
 | **Aurora** | Blurred with a coloured gradient |
-| **Solid** | A plain colour, no blur |
+| **Solid** | A plain colour, no blur (the default) |
 
 > [!IMPORTANT]
 > The blurred effects (every one except **Solid**) need Windows' **Transparency effects** turned on:
@@ -25,8 +25,16 @@ Windows 10 and Windows 11.
 time.
 
 > [!TIP]
-> Turning **Live acrylic** off uses a single snapshot taken when the bar opens. It still blurs, but it
-> stops updating in real time, which helps performance and battery on laptops.
+> **Live acrylic** is off by default. Turning it on makes the blur follow the desktop in real time,
+> but Windows draws that blur in a window of its own, and while the panel animates it can trail the bar
+> by a frame and show a slight seam at the edges (more noticeable on slower machines). Left off, the
+> same effects come from a single snapshot taken when the bar opens — smoother, and lighter on
+> laptops.
+
+> [!NOTE]
+> Live blur is a Windows 11 feature of this mod. On Windows 10 the effect you pick still works, but
+> always from a single snapshot: the system there cannot move the blur in step with the bar while the
+> panel animates.
 
 **Panel opacity** sets how solid the colour is (70–100). **Blur strength** applies to Mica, and to the
 other effects while Live acrylic is off; with it on, Windows sets their blur strength. **Solid** is
@@ -48,6 +56,8 @@ matching letters.
 - The bar looks sharp on every monitor, including high-resolution ones and a mix of several.
 - **Open on monitor** chooses which screen it appears on: the one with the mouse, the one with the
   active window, or the primary monitor.
+- **Panel position** chooses what stays centered while the details panel is open: the bar together with
+  the panel (the bar slides left, the default) or the bar on its own (the panel opens to its right).
 
 ## Sounds
 
