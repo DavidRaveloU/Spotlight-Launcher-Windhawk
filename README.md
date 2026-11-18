@@ -66,6 +66,9 @@ Some of the built-in looks — the **Aurora** effect in three colours, plus **Fr
 - **Instant, forgiving search.** Case- and accent-insensitive, multi-word and acronym matching, with the
   letters that matched highlighted. Results are ranked by match quality, then by how often and how
   recently you use them, and an app you pick after typing a few letters comes first next time.
+- **Your tools, without a shortcut.** Type a program's exact name the way you would in a terminal -
+  `git`, `python`, `cargo`, `code` - and it appears as a command, ready to run. Nothing to add to the
+  Start menu, and partial names never list them, so they stay out of the way.
 - **Files, without a second window.** Browse your drives and folders in the bar: locations and drive
   chips, sorting, previews, and rename, copy, terminal and Recycle Bin actions. Narrow the list with
   `*.pdf`, `type:image`, `dir:`, and now by size and date too: `size:>10mb`, `modified:today`.
