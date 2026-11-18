@@ -43,6 +43,14 @@ be told apart.
 
 - The list is the same one the Start menu uses: classic programs, Microsoft Store apps and shortcuts
   sitting on your Desktop.
+- A Microsoft Store app keeps its real icon even when the app is installed on another drive or when
+  Windows has not drawn it in the Start menu yet.
+- A shortcut whose program is no longer installed does not appear: the list only keeps entries that
+  still lead somewhere, so a removed program never leaves a dead row behind.
+- Programs on your `PATH` are offered as commands: type a tool's exact name (`git`, `python`,
+  `cargo`) and it appears below the apps, ready to run. A partial name never lists them.
+- An app installed from Chrome or Edge ("Install as app") is listed under its own name, and stays out
+  of the results while you search for the browser it came from.
 - **App index updates** (*Automatic* by default) notices apps as they are installed or removed and
   stays idle when nothing changes. It can also refresh every time the bar opens, or on a fixed
   interval (1, 3, 5 or 10 minutes).

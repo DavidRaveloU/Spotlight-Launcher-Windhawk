@@ -64,6 +64,7 @@ The mod's **Settings** tab groups its options by what they configure: **Appearan
 | File search engine | `Built-in scan` | **Built-in scan** walks Home and the extra folders live. **Everything (voidtools)** uses the running Everything index: every indexed drive, instant answers, Everything's syntax. Falls back to the built-in scan when Everything is not running. |
 | Extra search folders | *(empty)* | Folders searched by `find:`, separated by semicolons. Home is always searched; extra folders inside it are skipped. Not used with the Everything engine. |
 | Learn from your choices | `On` | Remembers the app you pick for a few typed words and offers it first next time. Stored locally per user; forgotten after 90 days without a pick. |
+| Match app descriptions | `Off` | Also matches the description a program carries, so a word that only appears there still brings the app up, and shows it beside the name. The shortcut's own text wins over the program's. Slower first index: one description is read per program. Classic programs only. |
 | Browser bookmarks | `Off` | Searches the bookmarks of Chrome, Edge, Brave, Vivaldi, Chromium, Opera, Firefox, Waterfox, LibreWolf, Zen and Floorp, and adds the `bm:` prefix. Read locally from the bookmark files only. |
 | Recent files | `On` | Shows Windows' Recent files on the empty bar and adds `recent:`. Requires Windows' recent-items option, or the list stays empty. |
 
