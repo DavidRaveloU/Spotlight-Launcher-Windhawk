@@ -1914,6 +1914,8 @@ static float g_imeX = 0;
 static float g_imeTopY = 0;
 static float g_imeBotY = 0;
 static void TsfSetFocus(bool focused);  // defined with the TSF text store, far below
+// Ends an open IME composition before the text it sits in changes under it.
+static void TsfEndComposition();
 static bool g_caretOn = true;
 
 static int g_sel = 0;
@@ -10520,6 +10522,9 @@ static void ScheduleFileSearch();
 static void CancelFileSearch();
 
 static void OnTextChanged() {
+    // A composition belongs to the text it was started on: commit it before the query changes
+    // under it, or the IME would keep editing a range that no longer exists.
+    TsfEndComposition();
     CancelConfirm();  // typing disarms a pending destructive command
     g_form = CustomFormState();  // the form belongs to the text that opened it
     // The calculator is debounced: clear its state now so typing feels instant (app searches
@@ -15446,6 +15451,7 @@ static void EnsureFormFocusVisible() {
 
 static void OpenCustomForm(int idx, const std::wstring& query) {
     if (idx < 0 || idx >= (int)g_cfg.commands.size()) return;
+    TsfEndComposition();  // the form takes over the field the composition was typed in
     const CustomEntry& e = g_cfg.commands[idx];
     CustomFormState st;
     st.active = true;
@@ -15488,6 +15494,7 @@ static void CloseCustomForm() {
 static void MoveFormFocus(int d, bool wrap) {
     const int n = (int)g_form.values.size();
     if (n == 0) return;
+    TsfEndComposition();
     int f = g_form.focus + d;
     if (wrap) {
         f = (f % n + n) % n;
@@ -16230,6 +16237,7 @@ static void CloseManager() {
 }
 
 static void OpenManager() {
+    TsfEndComposition();
     g_mgr = ManagerState();
     g_mgr.active = true;
     g_activator = -1;
@@ -16312,6 +16320,7 @@ static void ManagerFocusField(int f) {
     if (f == g_mgr.field) {
         return;
     }
+    TsfEndComposition();
     g_mgr.field = f;
     std::wstring* v = ManagerFieldText();
     g_mgr.caret = g_mgr.anchor = v ? (int)v->size() : 0;
@@ -16933,6 +16942,7 @@ static void RunConsoleHidden(const wchar_t* exe, const wchar_t* args) {
 // what the mode openers ("Open Windows", "Bookmarks" ...) do on Enter.
 static void EnterActivator(int ai) {
     if (ai < 0 || ai >= kActivatorCount) return;
+    TsfEndComposition();
     g_text = kActivators[ai].trigger;
     g_text += L' ';
     g_caret = g_anchor = (int)g_text.size();
@@ -17068,6 +17078,7 @@ static void StartFileSearch() {
 
 static void FileGoTo(const std::wstring dir, bool record, const std::wstring select) {
     if (dir.empty()) return;
+    TsfEndComposition();  // navigating away clears the query the composition lives in
     if (dir != kPcRoot) {  // the drives view is synthetic; every real folder must exist
         const DWORD at = GetFileAttributesW(dir.c_str());
         if (at == INVALID_FILE_ATTRIBUTES || !(at & FILE_ATTRIBUTE_DIRECTORY)) return;
@@ -17330,6 +17341,7 @@ static std::wstring AbsFromInput(std::wstring in) {
 
 static void BeginPathEdit() {
     if (!g_fileMode || g_fileCur.empty() || InPcRoot()) return;  // nothing to type in the drives view
+    TsfEndComposition();  // the path field takes the focus next
     g_fileMenuOpen = false;
     g_bandEdit = BandEdit::Path;
     g_bandText = g_fileCur;
@@ -17344,6 +17356,7 @@ static void BeginPathEdit() {
 }
 
 static void BeginRename(const FileEntry& t) {
+    TsfEndComposition();  // the rename field takes the focus next
     g_fileMenuOpen = false;
     g_bandEdit = BandEdit::Rename;
     g_bandTarget = t.path;
@@ -18541,6 +18554,7 @@ static void LaunchSelected() {
 // Switches between the app list and the file browser (folder button in the search bar).
 static void ToggleFileMode() {
     if (!g_fileMode && !g_cfg.filesEnabled) return;  // the file browser is turned off
+    TsfEndComposition();  // switching modes clears the query under the composition
     g_fileMode = !g_fileMode;
     // The preview belongs to the file that was open: leaving the browser closes it, or it would come
     // back later showing whatever row is selected then - a folder, which has nothing to preview.
@@ -20007,6 +20021,9 @@ public:
         g_imeCursor = 0;
     }
 
+    // True while the IME has a composition open, even before it contains a character.
+    bool Composing() const { return m_composing; }
+
     void NotifyTextAndSelectionChanged() {
         if (!m_sink || m_inEditSession || m_composing) return;
         if (m_sinkMask & TS_AS_SEL_CHANGE) m_sink->OnSelectionChange();
@@ -20114,8 +20131,11 @@ public:
         if (ulIndex != TF_DEFAULT_SELECTION && ulIndex != 0) return TS_E_NOSELECTION;
         if (ulCount == 0 || !pSelection) return S_OK;
         if (m_composing) {
-            pSelection[0].acpStart = m_selStart;
-            pSelection[0].acpEnd = m_selEnd;
+            // The selection can outlive the text it pointed at; TSF must never see a position past
+            // the end of the document.
+            const LONG len = (LONG)CurrentDoc().size();
+            pSelection[0].acpStart = std::clamp(m_selStart, (LONG)0, len);
+            pSelection[0].acpEnd = std::clamp(m_selEnd, pSelection[0].acpStart, len);
         } else {
             int c = 0, a = 0;
             ActivePlainText(c, a);
@@ -20189,9 +20209,13 @@ public:
                 m_compStart = s;
                 newCompEnd = s + (LONG)cch;
             }
-            m_compEnd = std::min((LONG)doc.size(), newCompEnd);
-            const LONG compLen = std::max((LONG)0, m_compEnd - m_compStart);
-            g_imeComposition = doc.substr((size_t)m_compStart, (size_t)compLen);
+            // The rebuilt document can be shorter than where the composition started (the query was
+            // replaced or cleared without ending it): clamp instead of slicing out of range, which
+            // would throw std::out_of_range out of this COM callback and kill the process.
+            const LONG docLen = (LONG)doc.size();
+            m_compStart = std::clamp(m_compStart, (LONG)0, docLen);
+            m_compEnd = std::clamp(newCompEnd, m_compStart, docLen);
+            g_imeComposition = doc.substr((size_t)m_compStart, (size_t)(m_compEnd - m_compStart));
             m_selStart = m_selEnd = s + (LONG)cch;
             g_imeCursor = std::clamp((int)(m_selEnd - m_compStart), 0, (int)g_imeComposition.size());
             if (pChange) {
@@ -20343,12 +20367,10 @@ public:
                     const std::wstring& base = ActivePlainText(c, a);
                     const std::wstring doc = base.substr(0, (size_t)std::min(c, a)) + g_imeComposition +
                                              base.substr((size_t)std::max(c, a));
-                    if (m_compStart <= (LONG)doc.size()) {
-                        const LONG avail =
-                            std::min(m_compEnd - m_compStart, (LONG)doc.size() - m_compStart);
-                        g_imeComposition =
-                            doc.substr((size_t)m_compStart, (size_t)std::max((LONG)0, avail));
-                    }
+                    // Same defensive clamp as SetText: the range has to stay inside the document.
+                    m_compStart = std::clamp(m_compStart, (LONG)0, (LONG)doc.size());
+                    m_compEnd = std::clamp(m_compEnd, m_compStart, (LONG)doc.size());
+                    g_imeComposition = doc.substr((size_t)m_compStart, (size_t)(m_compEnd - m_compStart));
                 }
                 acp->Release();
             }
@@ -20459,6 +20481,24 @@ static void TsfSetFocus(bool focused) {
         if (g_tsfStore) g_tsfStore->ResetComposition();
         g_tsfMgr->SetFocus(nullptr);
     }
+}
+
+// Ends an open IME composition before the document it belongs to changes under it (the query is
+// cleared, another field takes over, the mouse switches modes...). TerminateComposition makes the
+// IME close its own composition, which fires OnEndComposition and commits the text into the field
+// that was being edited, so nothing is cut from the wrong query. If the composition cannot be
+// terminated, it is dropped: losing a half-typed word beats keeping a range that no longer exists.
+static void TsfEndComposition() {
+    if (!g_tsfContext || !g_tsfStore || !g_tsfStore->Composing()) return;
+    ITfContextOwnerCompositionServices* svc = nullptr;
+    if (SUCCEEDED(g_tsfContext->QueryInterface(__uuidof(ITfContextOwnerCompositionServices),
+                                               (void**)&svc)) &&
+        svc) {
+        svc->TerminateComposition(nullptr);
+        svc->Release();
+        return;
+    }
+    if (g_tsfStore) g_tsfStore->ResetComposition();
 }
 
 static LRESULT CALLBACK LauncherWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -20763,7 +20803,14 @@ static LRESULT CALLBACK LauncherWndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM l
             return 0;
         }
 
+        case WM_RBUTTONDOWN:
+            // Mouse clicks are not consumed by the IME, so a click can change the field while a
+            // composition is still open: commit it first, the same as with the left button.
+            TsfEndComposition();
+            break;
+
         case WM_LBUTTONDOWN: {
+            TsfEndComposition();  // the click can move the caret, switch mode or open a menu
             if (g_helpOpen) {
                 float hx = 0, hy = 0;
                 MainOrigin(hx, hy);
