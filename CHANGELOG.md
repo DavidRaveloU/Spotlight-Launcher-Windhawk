@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Releases are listed **newest first**. Sections are only ever added: a new version gets a
 > new entry on top and the previous ones are kept exactly as they were.
 
+## [1.3.0] - 2026-11-21
+
+Your language, and the key you already use to open everything.
+
+### Added
+
+- **Write in your own language.** The bar takes input from the Windows language bar and its input
+  method, so Chinese, Japanese, Korean and every other IME work: type the reading, see the
+  composition underlined in the search field with the candidate list under the caret, and the
+  characters you pick land in the search. Nothing is searched until you accept a candidate, and the
+  text goes into the field you are editing - the search, the path bar, a custom entry or the entry
+  manager.
+- **The Windows key as the shortcut.** Pick **Win** under Shortcuts and pressing the Windows key
+  opens the bar. The Windows Start menu is kept closed so only one panel appears; the candidate
+  list, the result list and the rest of the bar work the same as with any other shortcut.
+
+### Changed
+
+- **Shortcut help follows the setting.** The F1 sheet and the settings page show the Windows key as
+  the shortcut when that is what you picked.
+
 ## [1.2.0] - 2026-11-14
 
 Every icon where it belongs, and the tools you already have on your PATH.
