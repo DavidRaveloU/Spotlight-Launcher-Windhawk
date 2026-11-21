@@ -19734,7 +19734,6 @@ static int HitRow(int mx, int my) {
 // opens the launcher, and (when the user asked for it) an unassigned mask key is injected before
 // the real key-up so Windows cancels the Start menu. IAppVisibility is the fallback for the cases
 // where Start still appears: it reports when the Start menu is shown, and the bar dismisses it.
-static HHOOK g_winKeyHook = nullptr;
 static HANDLE g_winKeyThread = nullptr;
 static DWORD g_winKeyThreadId = 0;
 static IAppVisibility* g_appVisibility = nullptr;
@@ -19824,8 +19823,10 @@ static void UnwatchStart() {
     }
 }
 
-// This runs in the input pipeline: no locks, no disk, no waiting. It only decides whether the
-// press was the Windows key on its own, and posts the launcher message.
+// This runs in the input pipeline: no locks, no disk, no waiting, and it reads only its own state.
+// It decides whether the press was the Windows key on its own and posts the launcher message; the
+// "ignored in fullscreen" rule is applied by the window when it handles WM_HOTKEY, so the hook
+// never reads the configuration or the window state.
 static LRESULT CALLBACK WinKeyHookProc(int nCode, WPARAM wp, LPARAM lp) {
     static bool winDown = false, alone = false;
     static DWORD lastDown = 0;
@@ -19842,9 +19843,7 @@ static LRESULT CALLBACK WinKeyHookProc(int nCode, WPARAM wp, LPARAM lp) {
                     alone = true;
                 }
             } else if (win) {
-                const bool open = winDown && alone &&
-                                  !(g_cfg.disableFullscreen && g_vis == Vis::Hidden &&
-                                    IsForegroundFullscreen());
+                const bool open = winDown && alone;
                 winDown = false;
                 if (open) {
                     // An unassigned mask key between the press and the real Win key-up makes
@@ -19865,17 +19864,23 @@ static LRESULT CALLBACK WinKeyHookProc(int nCode, WPARAM wp, LPARAM lp) {
     return CallNextHookEx(nullptr, nCode, wp, lp);
 }
 
+// The hook belongs to the thread that installed it: it is published here for the caller to read
+// once the ready event is set, and only this thread ever unhooks it. A thread that exits late can
+// therefore never remove a hook installed by a newer one.
+static HHOOK g_winKeyInstalled = nullptr;
+
 static DWORD WINAPI WinKeyThreadProc(LPVOID ready) {
     MSG msg;
     PeekMessageW(&msg, nullptr, WM_USER, WM_USER, PM_NOREMOVE);  // create the message queue
-    g_winKeyHook = SetWindowsHookExW(WH_KEYBOARD_LL, WinKeyHookProc, GetModuleHandleW(nullptr), 0);
+    const HHOOK hook =
+        SetWindowsHookExW(WH_KEYBOARD_LL, WinKeyHookProc, GetModuleHandleW(nullptr), 0);
+    g_winKeyInstalled = hook;
     SetEvent((HANDLE)ready);
-    while (g_winKeyHook && GetMessageW(&msg, nullptr, 0, 0) > 0) {
-        DispatchMessageW(&msg);
-    }
-    if (g_winKeyHook) {
-        UnhookWindowsHookEx(g_winKeyHook);
-        g_winKeyHook = nullptr;
+    if (hook) {
+        while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
+            DispatchMessageW(&msg);
+        }
+        UnhookWindowsHookEx(hook);
     }
     return 0;
 }
@@ -19884,22 +19889,17 @@ static void UninstallWinKeyHook() {
     UnwatchStart();
     if (!g_winKeyThread) return;
     PostThreadMessageW(g_winKeyThreadId, WM_QUIT, 0, 0);
-    // Bounded on purpose: the hook thread only pumps messages, but its callback can be inside
-    // SendInput waiting on the input pipeline. A stuck thread must never freeze a settings change
-    // or the unload, so after the timeout the hook is removed from here, its handle is left alone
-    // (it still belongs to a running thread) and the thread exits on its own once the callback
-    // returns and the loop finds no hook.
-    if (WaitForSingleObject(g_winKeyThread, 1500) == WAIT_OBJECT_0) {
+    // Bounded so a settings change or the unload can never freeze. Because the hook is owned by the
+    // thread, a thread that overruns cannot affect a newer one; its handle is left open rather than
+    // closing one that may still be in use.
+    if (WaitForSingleObject(g_winKeyThread, 2000) == WAIT_OBJECT_0) {
         CloseHandle(g_winKeyThread);
     } else {
-        OutputDebugStringW(L"Spotlight: Win key hook thread did not stop in time\n");
-    }
-    if (g_winKeyHook) {
-        UnhookWindowsHookEx(g_winKeyHook);
-        g_winKeyHook = nullptr;
+        Wh_Log(L"Win key hook thread did not stop in time");
     }
     g_winKeyThread = nullptr;
     g_winKeyThreadId = 0;
+    g_winKeyInstalled = nullptr;
 }
 
 static bool RegisterLauncherHotkey() {
@@ -19908,15 +19908,16 @@ static bool RegisterLauncherHotkey() {
     if (g_cfg.hotkeyVk == VK_LWIN) {
         HANDLE ready = CreateEventW(nullptr, TRUE, FALSE, nullptr);
         if (!ready) return false;
+        g_winKeyInstalled = nullptr;
         g_winKeyThread = CreateThread(nullptr, 0, WinKeyThreadProc, ready, 0, &g_winKeyThreadId);
-        // Bounded: the thread signals as soon as the hook is installed. If it does not, the hook
-        // failed to install (or the thread never started), so report the failure instead of
-        // leaving the UI thread waiting for an event that will not arrive.
+        // Bounded: the thread signals as soon as it tried to install the hook, and publishes it in
+        // g_winKeyInstalled. If the event never arrives, report the failure instead of leaving the
+        // UI thread waiting for something that will not come.
         const bool started =
             g_winKeyThread && WaitForSingleObject(ready, 2000) == WAIT_OBJECT_0;
         CloseHandle(ready);
-        if (!started || !g_winKeyHook) {
-            UninstallWinKeyHook();  // release the thread and whatever it managed to install
+        if (!started || !g_winKeyInstalled) {
+            UninstallWinKeyHook();  // let the thread go and release whatever it installed
             return false;
         }
         WatchStart();
@@ -19930,13 +19931,21 @@ static bool RegisterLauncherHotkey() {
 
 static volatile LONG g_hotkeyWarnUp = 0;
 
-static DWORD WINAPI HotkeyWarningThread(LPVOID) {
+static DWORD WINAPI HotkeyWarningThread(LPVOID param) {
+    // param carries whether the failing shortcut is the Windows key: it fails by installing a hook,
+    // not by being taken by another application, so the text has to say something else.
+    const bool winKey = param != nullptr;
     MessageBoxW(nullptr,
-                L"Spotlight Launcher could not register the keyboard shortcut because another "
-                L"application is already using it (for example, Alt + Space is also the system "
-                L"shortcut for a window's menu).\n\n"
-                L"Change the shortcut in the mod settings or free that shortcut in the other "
-                L"application.",
+                winKey
+                    ? L"Spotlight Launcher could not start listening for the Windows key: another "
+                      L"program may be blocking it, or the system refused the keyboard hook.\n\n"
+                      L"Pick a different shortcut in the mod settings, or restart Windhawk and try "
+                      L"again."
+                    : L"Spotlight Launcher could not register the keyboard shortcut because another "
+                      L"application is already using it (for example, Alt + Space is also the system "
+                      L"shortcut for a window's menu).\n\n"
+                      L"Change the shortcut in the mod settings or free that shortcut in the other "
+                      L"application.",
                 L"Spotlight Launcher", MB_OK | MB_ICONWARNING | MB_TOPMOST | MB_SETFOREGROUND);
     InterlockedExchange(&g_hotkeyWarnUp, 0);
     return 0;
@@ -19949,7 +19958,9 @@ static void RegisterHotkeyOrWarn() {
         // User-triggered settings changes can call this repeatedly: keep a single warning visible
         // instead of stacking one box per change.
         if (InterlockedCompareExchange(&g_hotkeyWarnUp, 1, 0) == 0) {
-            HANDLE th = CreateThread(nullptr, 0, HotkeyWarningThread, nullptr, 0, nullptr);
+            HANDLE th = CreateThread(nullptr, 0, HotkeyWarningThread,
+                                     (LPVOID)(INT_PTR)(g_cfg.hotkeyVk == VK_LWIN ? 1 : 0), 0,
+                                     nullptr);
             if (th) CloseHandle(th);
         }
     }
