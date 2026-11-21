@@ -11,7 +11,7 @@ sheet with all of this, and it scrolls when the page is longer than the bar.
 
 | Shortcut | Action |
 | --- | --- |
-| **Alt + Space** | Open / close the bar (configurable) |
+| **Alt + Space** | Open / close the bar (configurable: Alt + Space, Ctrl + Space, Ctrl + Alt + Space, Shift + Alt + Space, Ctrl + Shift + Space, or the Windows key, which also disables the Windows Start menu) |
 | **↑ / ↓** | Move the selection |
 | **Tab** | Switch between apps and Files (when the file browser is on) |
 | **F1** | Cheat sheet (shortcuts, prefix, filters, calculator) |

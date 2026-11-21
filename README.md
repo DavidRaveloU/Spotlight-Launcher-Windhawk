@@ -66,6 +66,11 @@ Some of the built-in looks — the **Aurora** effect in three colours, plus **Fr
 - **Instant, forgiving search.** Case- and accent-insensitive, multi-word and acronym matching, with the
   letters that matched highlighted. Results are ranked by match quality, then by how often and how
   recently you use them, and an app you pick after typing a few letters comes first next time.
+- **Your language, with your IME.** Chinese, Japanese, Korean and any other input method work in the
+  bar: the composition appears underlined in the field with the candidate list under the caret, and
+  only the characters you accept are searched.
+- **The Windows key, if you prefer it.** Pick **Win** as the shortcut and the Windows key opens the bar
+  instead of the Start menu, which stays closed so only one panel appears.
 - **Your tools, without a shortcut.** Type a program's exact name the way you would in a terminal -
   `git`, `python`, `cargo`, `code` - and it appears as a command, ready to run. Nothing to add to the
   Start menu, and partial names never list them, so they stay out of the way.

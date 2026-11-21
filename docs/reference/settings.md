@@ -45,7 +45,7 @@ The mod's **Settings** tab groups its options by what they configure: **Appearan
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| Keyboard shortcut | `Alt + Space` | Opens and closes the bar. |
+| Keyboard shortcut | `Alt + Space` | Opens and closes the bar. Alt + Space, Ctrl + Space, Ctrl + Alt + Space, Shift + Alt + Space, Ctrl + Shift + Space, or the Windows key on its own (which also keeps the Windows Start menu closed, so only Spotlight appears). |
 | Details panel shortcut | `Ctrl + I` | Shows or hides the actions and details panel. Ctrl + I, Ctrl + K, Ctrl + Space or F4. If you pick Ctrl + Space here, choose a different main shortcut so the two do not clash. |
 
 ## Apps

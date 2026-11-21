@@ -6,6 +6,7 @@ extras that appear in it.
 ## In this page
 
 - [How matching works](#how-matching-works)
+- [Typing in your language](#typing-in-your-language)
 - [Result order](#result-order)
 - [Where the app list comes from](#where-the-app-list-comes-from)
 - [Pinned apps](#pinned-apps)
@@ -22,6 +23,23 @@ extras that appear in it.
   *Visual Studio Code*.
 - Acronyms work too: `vsc` finds *Visual Studio Code* by the initials of its words.
 - The letters that matched are highlighted in the result.
+
+## Typing in your language
+
+The bar takes its text from the Windows language bar, so any input method works, not only the Latin
+keyboard.
+
+1. Switch to the language with **Win + Space**, the way you would in any other program. With Chinese
+   (Simplified), the language bar shows **中** when the IME is in Chinese mode; **Shift** switches it
+   between **中** and **英**.
+2. Type the reading (for example `nihao`). The composition appears underlined inside the search field
+   and the candidate list opens under the caret.
+3. Pick a candidate with its number, **Space** for the first one, or **Enter**. The characters land in
+   the field and the search runs with them.
+
+Nothing is searched while you are composing: the list reacts when you accept a candidate. The same
+works in the other text fields, so a Chinese name can be typed into a custom entry or into the path
+bar.
 
 ## Result order
 
